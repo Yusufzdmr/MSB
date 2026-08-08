@@ -3113,12 +3113,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDFDFC]" style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
-      {isPublic && (
-        <>
-          <Header activeScreen={screen} onNav={setScreen} />
-          <ScreenTabs active={screen} onSwitch={setScreen} />
-        </>
-      )}
+      {isPublic && <Header activeScreen={screen} onNav={setScreen} />}
 
       {screen === "listings"      && <Screen1 onDetail={() => setScreen("detail")} onNav={setScreen} onDuyuru={(id) => { setAktifDuyuruId(id); setScreen("duyuru-detay"); }} />}
       {screen === "detail"        && <Screen2 onBack={() => setScreen("listings")} onNav={setScreen} />}
@@ -3132,8 +3127,6 @@ export default function App() {
       {screen === "admin"       && <AdminScreen  onLogout={() => setScreen("login")} />}
       {screen === "aday-ocr"    && <OcrYukle     onBack={() => setScreen("dashboard")} />}
       {screen === "aday-sonuc"  && <SonucEkrani  onBack={() => setScreen("dashboard")} />}
-
-      {!isPublic && <DemoSwitcher active={screen} onSwitch={setScreen} />}
 
       <ToastHost toasts={toasts} onDismiss={id => setToasts(t => t.filter(x => x.id !== id))} />
     </div>
