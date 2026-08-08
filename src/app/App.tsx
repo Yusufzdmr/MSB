@@ -2174,9 +2174,11 @@ function ForgotScreen({ onHome, onLogin }: { onHome: () => void; onLogin: () => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: () => void }) {
-  const [method, setMethod] = useState<"pw" | "mobile" | "eimza" | "kart" | "banka">("pw");
+  const [method, setMethod] = useState<"nvi" | "mobile" | "eimza" | "kart" | "banka">("nvi");
   const [tc, setTc] = useState("");
-  const [pw, setPw] = useState("");
+  const [ad, setAd] = useState("");
+  const [soyad, setSoyad] = useState("");
+  const [dogumYili, setDogumYili] = useState("");
   const [captcha, setCaptcha] = useState("");
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
@@ -2185,26 +2187,50 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
   const CAPTCHA_CODE = "K4Z9M";
 
   const methods = [
-    { id: "pw",     label: "e-Devlet Şifresi",   Icon: Lock },
-    { id: "mobile", label: "Mobil İmza",          Icon: Phone },
-    { id: "eimza",  label: "e-İmza",              Icon: FileText },
-    { id: "kart",   label: "T.C. Kimlik Kartı",  Icon: Fingerprint },
-    { id: "banka",  label: "İnternet Bankacılığı", Icon: Building2 },
+    { id: "nvi",    label: "NVİ Kimlik Doğrulama (Gerçek)", Icon: Fingerprint },
+    { id: "mobile", label: "Mobil İmza",                     Icon: Phone },
+    { id: "eimza",  label: "e-İmza",                         Icon: FileText },
+    { id: "kart",   label: "T.C. Kimlik Kartı",              Icon: Fingerprint },
+    { id: "banka",  label: "İnternet Bankacılığı",           Icon: Building2 },
   ] as const;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (method !== "pw") { setError("Bu giriş yöntemi demoda desteklenmiyor. Lütfen e-Devlet Şifresi seçin."); return; }
+    if (method !== "nvi") { setError("Bu giriş yöntemi demoda desteklenmiyor. Lütfen NVİ Kimlik Doğrulama seçin."); return; }
     if (tc.length !== 11) { setError("T.C. Kimlik No 11 hane olmalıdır."); return; }
-    if (pw.length < 4)     { setError("e-Devlet şifreniz eksik."); return; }
+    if (!ad.trim() || !soyad.trim()) { setError("Ad ve Soyad zorunludur."); return; }
+    const yy = parseInt(dogumYili, 10);
+    if (!Number.isInteger(yy) || yy < 1900 || yy > new Date().getFullYear()) { setError("Geçerli bir doğum yılı girin (Örn: 1990)."); return; }
     if (captcha.toUpperCase() !== CAPTCHA_CODE) { setError("Güvenlik kodu hatalı."); return; }
     setError(null);
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const resp = await fetch("/api/tckimlik-dogrula", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tckimlikNo: tc, ad: ad.trim(), soyad: soyad.trim(), dogumYili: yy }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        setLoading(false);
+        setError(data.hata ?? `Doğrulama servisi hata verdi (HTTP ${resp.status}).`);
+        return;
+      }
+      if (!data.dogrulandi) {
+        setLoading(false);
+        setError("NVİ kayıtlarında bu bilgilerle eşleşen kimlik bulunamadı. Ad-Soyad, TCKN ve Doğum Yılını kontrol edin.");
+        return;
+      }
+      // Doğrulandı — oturum aç
       setLoading(false);
       setRedirecting(true);
+      // Mock: mevcut demo adayı seç
+      storeActions.girisAday("18878273464");
       setTimeout(onSuccess, 1400);
-    }, 900);
+    } catch (err: any) {
+      setLoading(false);
+      setError(`Ağ hatası: ${err?.message ?? "bilinmeyen"}. Lütfen tekrar deneyin.`);
+    }
   };
 
   if (redirecting) {
@@ -2295,10 +2321,11 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
       <main className="flex-1 bg-[#FAFAFA]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-10 lg:py-14">
           {/* Demo notice */}
-          <div className="max-w-3xl mx-auto mb-6 flex items-start gap-2.5 p-3.5 rounded-lg bg-amber-50 border border-amber-200">
-            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
-            <p className="text-[12.5px] text-amber-900 leading-relaxed">
-              <strong>Demo Modu:</strong> Bu ekran turkiye.gov.tr tasarımını taklit eden bir tanıtım prototipidir. Herhangi bir 11 haneli TC + 4+ karakter şifre + güvenlik kodu <strong className="tabular-nums bg-white px-1.5 py-0.5 rounded border border-amber-300 mx-0.5">{CAPTCHA_CODE}</strong> ile giriş yapabilirsiniz.
+          <div className="max-w-3xl mx-auto mb-6 flex items-start gap-2.5 p-3.5 rounded-lg bg-emerald-50 border border-emerald-200">
+            <BadgeCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+            <p className="text-[12.5px] text-emerald-900 leading-relaxed">
+              <strong>Gerçek NVİ Doğrulaması:</strong> Aşağıdaki form, T.C. Nüfus ve Vatandaşlık İşleri Genel Müdürlüğü'nün resmi <strong>tckimlik.nvi.gov.tr</strong> servisine bağlanır. TCKN + Ad + Soyad + Doğum Yılı bilgileriniz nüfus kayıtlarında eşleştirilir.
+              Güvenlik kodu: <strong className="tabular-nums bg-white px-1.5 py-0.5 rounded border border-emerald-300 mx-0.5">{CAPTCHA_CODE}</strong>
             </p>
           </div>
 
@@ -2330,7 +2357,7 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
 
             {/* Form area */}
             <div className="p-6 sm:p-8">
-              {method === "pw" ? (
+              {method === "nvi" ? (
                 <form onSubmit={submit} className="space-y-4 max-w-md">
                   <div>
                     <label className="block text-[12px] font-bold text-slate-600 mb-1.5">T.C. Kimlik No <span className="text-[#E30A17]">*</span></label>
@@ -2340,11 +2367,29 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
                       placeholder="11 haneli T.C. Kimlik Numaranız" />
                   </div>
 
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Ad <span className="text-[#E30A17]">*</span></label>
+                      <input value={ad} onChange={e => setAd(e.target.value)}
+                        className="w-full px-3.5 py-3 text-[14px] uppercase bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#E30A17]/20 focus:border-[#E30A17]/60 transition"
+                        placeholder="Nüfustaki adınız" />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Soyad <span className="text-[#E30A17]">*</span></label>
+                      <input value={soyad} onChange={e => setSoyad(e.target.value)}
+                        className="w-full px-3.5 py-3 text-[14px] uppercase bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#E30A17]/20 focus:border-[#E30A17]/60 transition"
+                        placeholder="Nüfustaki soyadınız" />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-[12px] font-bold text-slate-600 mb-1.5">e-Devlet Şifresi <span className="text-[#E30A17]">*</span></label>
-                    <PasswordInput value={pw} onChange={setPw} placeholder="e-Devlet şifreniz" />
+                    <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Doğum Yılı <span className="text-[#E30A17]">*</span></label>
+                    <input inputMode="numeric" maxLength={4}
+                      value={dogumYili} onChange={e => setDogumYili(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                      className="w-full px-3.5 py-3 text-[14px] tabular-nums tracking-wide bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#E30A17]/20 focus:border-[#E30A17]/60 transition"
+                      placeholder="Örn: 1990" />
                     <p className="text-[11.5px] text-slate-500 mt-1.5 leading-relaxed">
-                      <span className="text-[#E30A17] font-semibold">*</span> e-Devlet şifrenizi içeren zarfınızı PTT Merkez Müdürlüklerinden, T.C. Kimlik Kartınızla temin edebilirsiniz.
+                      <span className="text-emerald-600 font-semibold">✓</span> Bilgileriniz T.C. NVİGM'nin <strong>tckimlik.nvi.gov.tr</strong> resmi servisine gönderilecek ve nüfus kayıtlarında eşleştirilecektir. KPS kişisel bilgi çekmez, yalnızca doğrulama sonucu döner.
                     </p>
                   </div>
 
