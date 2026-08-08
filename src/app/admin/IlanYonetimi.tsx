@@ -305,6 +305,70 @@ export default function IlanYonetimi() {
               <input type="number" className={inputCls} value={editing.boyMin ?? ""}
                 onChange={e => setEditing({ ...editing, boyMin: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
+
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1 mt-3">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">6. Mali ve Ödeme Ayarları</h4>
+            </div>
+
+            <Field label="Ödeme Kuralı">
+              <select className={selectCls} value={editing.odemeKurali ?? "yok"} onChange={e => setEditing({ ...editing, odemeKurali: e.target.value as any })}>
+                <option value="yok">Ücretsiz İlan (Pasif)</option>
+                <option value="once_tercih_sonra_odeme">A. Önce Tercih, Sonra Ödeme (Önerilen)</option>
+                <option value="once_odeme_sonra_tercih">B. Önce Ödeme, Sonra Tercih</option>
+              </select>
+            </Field>
+            <Field label="Ücret Tutarı (TL)">
+              <input type="number" min={0} className={inputCls} value={editing.ucretTutari ?? 0}
+                onChange={e => setEditing({ ...editing, ucretTutari: Number(e.target.value) })}
+                disabled={!editing.odemeKurali || editing.odemeKurali === "yok"} />
+            </Field>
+            <Field label="Ödeme Vadesi (saat)" hint="Ödeme adımı başladığından itibaren tanınan süre">
+              <input type="number" min={1} className={inputCls} value={editing.odemeVadeSaat ?? 48}
+                onChange={e => setEditing({ ...editing, odemeVadeSaat: Number(e.target.value) })}
+                disabled={!editing.odemeKurali || editing.odemeKurali === "yok"} />
+            </Field>
+            <div className="flex items-end gap-4">
+              <label className="flex items-center gap-2 text-[12.5px] cursor-pointer" title="Şehit/gazi yakınları için ödeme adımını atla">
+                <input type="checkbox" className="w-4 h-4 accent-[#A82232]" checked={!!editing.sehitGaziUcretMuaf}
+                  onChange={e => setEditing({ ...editing, sehitGaziUcretMuaf: e.target.checked })}
+                  disabled={!editing.odemeKurali || editing.odemeKurali === "yok"} />
+                <span>Şehit / Gazi yakınları <strong>ücretten muaf</strong></span>
+              </label>
+            </div>
+            <div className="col-span-2 flex items-center gap-4">
+              <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-[#A82232]" checked={!!editing.iadeMekanizmasi}
+                  onChange={e => setEditing({ ...editing, iadeMekanizmasi: e.target.checked })}
+                  disabled={!editing.odemeKurali || editing.odemeKurali === "yok"} />
+                <span><strong>İade Mekanizması Aktif</strong> — Yerleşemeyen adaylar başvuru ücretini geri alır</span>
+              </label>
+              <span className="text-[11px] text-[#888]">Pasifse aday tercih verirken iade olmayacağını bilir.</span>
+            </div>
+
+            <Field label="Banka Adı">
+              <input className={inputCls} value={editing.banka?.ad ?? ""}
+                onChange={e => setEditing({ ...editing, banka: { ...(editing.banka ?? { ad: "", iban: "", alici: "" }), ad: e.target.value } })}
+                disabled={!editing.odemeKurali || editing.odemeKurali === "yok"} />
+            </Field>
+            <Field label="IBAN">
+              <input className={inputCls} placeholder="TR33 0006 1005 1978 6457 8413 26"
+                value={editing.banka?.iban ?? ""}
+                onChange={e => setEditing({ ...editing, banka: { ...(editing.banka ?? { ad: "", iban: "", alici: "" }), iban: e.target.value } })}
+                disabled={!editing.odemeKurali || editing.odemeKurali === "yok"} />
+            </Field>
+            <div className="col-span-2">
+              <Field label="Alıcı Adı">
+                <input className={inputCls} placeholder="MSB Personel Temin Dairesi Başkanlığı"
+                  value={editing.banka?.alici ?? ""}
+                  onChange={e => setEditing({ ...editing, banka: { ...(editing.banka ?? { ad: "", iban: "", alici: "" }), alici: e.target.value } })}
+                  disabled={!editing.odemeKurali || editing.odemeKurali === "yok"} />
+              </Field>
+            </div>
+
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1 mt-3">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">7. Diğer</h4>
+            </div>
+
             <Field label="Şehir(ler)">
               <input className={inputCls} value={editing.sehir ?? ""} onChange={e => setEditing({ ...editing, sehir: e.target.value })} />
             </Field>

@@ -63,19 +63,90 @@ export default function FinansYonetimi() {
     setSeciliBsvId(null); setRedGerekce("");
   };
 
+  // Canlı istatistikler
+  const ilanIstatistikleri = useMemo(() => {
+    return store.ilanlar
+      .filter(i => i.odemeKurali && i.odemeKurali !== "yok")
+      .map(i => {
+        const bsvIlan = store.basvurular.filter(b => b.ilanId === i.id);
+        const tercihYapan = bsvIlan.length;
+        const dekontYukleyen = bsvIlan.filter(b => b.odemeDurumu === "inceleniyor" || b.odemeDurumu === "alindi").length;
+        const onaylandi = bsvIlan.filter(b => b.odemeDurumu === "alindi").length;
+        const suresiGecen = bsvIlan.filter(b => b.odemeDurumu === "iptal").length;
+        const toplamButce = onaylandi * (i.ucretTutari ?? 0);
+        return { id: i.id, baslik: i.baslik, tercihYapan, dekontYukleyen, onaylandi, suresiGecen, toplamButce, ucret: i.ucretTutari ?? 0, iadeMekanizmasi: !!i.iadeMekanizmasi };
+      });
+  }, [store.ilanlar, store.basvurular]);
+
   return (
     <div className="space-y-4">
       {/* Sekmeler */}
       <div className="flex border-b border-[#DDD]">
         <button onClick={() => setAktifSekme("inceleniyor")}
           className={`px-4 py-2 text-[13px] font-semibold border-b-2 ${aktifSekme === "inceleniyor" ? "border-[#A82232] text-[#A82232]" : "border-transparent text-[#888]"}`}>
-          Ödeme Doğrulama Kuyruğu ({inceleniyor.length})
+          Ödeme Doğrulama ({inceleniyor.length})
         </button>
         <button onClick={() => setAktifSekme("iade")}
           className={`px-4 py-2 text-[13px] font-semibold border-b-2 ${aktifSekme === "iade" ? "border-[#A82232] text-[#A82232]" : "border-transparent text-[#888]"}`}>
           İade / Mahsup ({iadeAdaylar.length})
         </button>
+        <button onClick={() => setAktifSekme("takip" as any)}
+          className={`px-4 py-2 text-[13px] font-semibold border-b-2 ${(aktifSekme as any) === "takip" ? "border-[#A82232] text-[#A82232]" : "border-transparent text-[#888]"}`}>
+          İlan Bazlı Canlı Takip
+        </button>
       </div>
+
+      {(aktifSekme as any) === "takip" && (
+        <div className="bg-white border border-[#DDD] rounded overflow-hidden">
+          <div className="px-4 py-3 border-b bg-[#F5F5F5]">
+            <h3 className="text-[13.5px] font-bold text-[#555] uppercase">İlan Bazlı Canlı Finansal Takip</h3>
+          </div>
+          {ilanIstatistikleri.length === 0 ? (
+            <div className="p-6 text-[13px] text-[#888] italic text-center">Ücretli ilan bulunmuyor.</div>
+          ) : (
+            <table className="w-full text-[12.5px]">
+              <thead>
+                <tr style={{ background: MSB.redTable, color: "#fff" }}>
+                  <th className="px-3 py-2 text-left text-[10.5px] uppercase">İlan</th>
+                  <th className="px-3 py-2 text-right text-[10.5px] uppercase">Ücret</th>
+                  <th className="px-3 py-2 text-right text-[10.5px] uppercase">Tercih Yapan</th>
+                  <th className="px-3 py-2 text-right text-[10.5px] uppercase">Dekont Yükleyen</th>
+                  <th className="px-3 py-2 text-right text-[10.5px] uppercase">Onaylanan</th>
+                  <th className="px-3 py-2 text-right text-[10.5px] uppercase">Süre Geçen</th>
+                  <th className="px-3 py-2 text-right text-[10.5px] uppercase">Toplam Bütçe</th>
+                  <th className="px-3 py-2 text-center text-[10.5px] uppercase">İade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ilanIstatistikleri.map((s, i) => (
+                  <tr key={s.id} className={i % 2 === 0 ? "" : "bg-[#FAFAFA]"}>
+                    <td className="px-3 py-2 font-semibold truncate max-w-[280px]">{s.baslik}</td>
+                    <td className="px-3 py-2 tabular-nums text-right">{s.ucret} TL</td>
+                    <td className="px-3 py-2 tabular-nums text-right">{s.tercihYapan}</td>
+                    <td className="px-3 py-2 tabular-nums text-right">{s.dekontYukleyen}</td>
+                    <td className="px-3 py-2 tabular-nums text-right font-bold text-[#5E7F42]">{s.onaylandi}</td>
+                    <td className="px-3 py-2 tabular-nums text-right text-[#A82232]">{s.suresiGecen}</td>
+                    <td className="px-3 py-2 tabular-nums text-right font-black text-[#333]">{s.toplamButce.toLocaleString("tr-TR")} TL</td>
+                    <td className="px-3 py-2 text-center">
+                      {s.iadeMekanizmasi
+                        ? <span className="text-[10.5px] font-bold text-[#5E7F42]">✓ AKTİF</span>
+                        : <span className="text-[10.5px] font-bold text-[#888]">— KAPALI</span>}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="bg-[#F5F5F5] border-t-2 border-[#A82232] font-bold">
+                  <td className="px-3 py-2 uppercase text-[11.5px]">GENEL TOPLAM</td>
+                  <td colSpan={5}></td>
+                  <td className="px-3 py-2 tabular-nums text-right text-[14px] text-[#A82232]">
+                    {ilanIstatistikleri.reduce((a, s) => a + s.toplamButce, 0).toLocaleString("tr-TR")} TL
+                  </td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {aktifSekme === "inceleniyor" && (
         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">

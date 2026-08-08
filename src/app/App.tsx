@@ -22,6 +22,8 @@ import DuyuruDetay from "./aday/DuyuruDetay";
 import Mesajlarim from "./aday/Mesajlarim";
 import KesinKayit from "./aday/KesinKayit";
 import Odeme from "./aday/Odeme";
+import BasvuruDetayTimeline from "./aday/BasvuruDetayTimeline";
+import IlanTakvimi from "./aday/IlanTakvimi";
 import { actions as storeActions, useStore as useSharedStore } from "./shared/store";
 
 // Turkish flag & institutional palette
@@ -740,6 +742,11 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
               <span className="w-2 h-2 rounded-full bg-[#4A4A4A]" />
               <span>Mevcut aday: Sağ panelden duyuru/sonuç takip edin</span>
             </span>
+          </div>
+
+          {/* Dinamik İlan Takvimi */}
+          <div className="mt-6">
+            <IlanTakvimi onDetay={() => onDetail()} />
           </div>
         </div>
       </section>
@@ -2851,15 +2858,22 @@ function DashboardScreen({ onLogout, onOcr, onSonuc }: { onLogout: () => void; o
               </>
             )}
 
-            {/* ═════ TERCİHLERİM ═════ */}
+            {/* ═════ TERCİHLERİM — Timeline (yeni) ═════ */}
             {view === "tercihlerim" && (
               <>
                 <div className="flex items-start gap-2.5 mb-4">
                   <AlertCircle className="w-4 h-4 text-[#A82232] flex-shrink-0 mt-0.5" strokeWidth={2} />
                   <p className="text-[13.5px] font-bold" style={{ color: MSB.red }}>
-                    Bu sayfa, sınava katılım aşamasındaki aktif tercihlerinizi gösterir. Yerleşmeye dair aktif tercihlerinizi duyurulardan takip ediniz.
+                    Her başvuru için başvuru → puan → ödeme → yerleştirme → itiraz süreçlerinin tümünü zaman çizelgesi olarak görüntüleyebilirsiniz.
                   </p>
                 </div>
+                <BasvuruDetayTimeline adayId="18878273464" />
+              </>
+            )}
+
+            {/* Eski tercihlerim kaldırıldı */}
+            {false && view === "tercihlerim" && (
+              <>
                 <MSBPanel title="Başvurularım">
                   <div className="flex items-center gap-3">
                     <label className="w-[140px] text-right text-[13px] text-[#555]">Başvuru Seçiniz</label>

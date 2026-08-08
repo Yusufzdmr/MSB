@@ -419,7 +419,66 @@ Ayrı sayfa yok — mevcut "Çağrı Aç" üzerinden çalışır. Yeni kategoril
 
 ---
 
-## 20. Ortak Notlar
+## 20. Ödeme Muafiyeti + Vade + Dinamik İade
+
+### İlan Sihirbazı — "Mali ve Ödeme Ayarları"
+- **Ücret Durumu**: Aktif / Pasif
+- **Ücret Tutarı** (TL)
+- **Ödeme Kuralı**: A. Önce Tercih Sonra Ödeme / B. Önce Ödeme Sonra Tercih
+- **Ödeme Vadesi (saat)**: Ödeme adımı başladığı andan itibaren tanınan yasal süre (Örn: 48 saat)
+- **Şehit/Gazi Muafiyeti** checkbox: profili onaylı şehit/gazi yakınları için ödeme adımı tamamen kaldırılır
+- **İade Mekanizması**: Aktif/Pasif toggle — bazı ilanlarda aday iade edilmeyeceğini bilerek başvurur
+
+### Finansal Takip Sekmesi (İlan Bazlı)
+Admin ilan yayınladığı an aşağıdaki canlı istatistikleri tek ekranda görür:
+- Kaç kişi tercih yaptı?
+- Kaç kişi dekont yükledi?
+- Onaylanan toplam bütçe (TL)
+- Ödeme süresini geçiren kaç kişi var?
+
+---
+
+## 21. Sonuç Sorgulama — Ödeme Durumu Göstergesi
+
+Aday duyuru altındaki "Sonuç Sorgula" ekranına TCKN + Captcha ile giriş yaptığında, sonuç kartının içinde **Ödeme Durumu** kutucuğu görünür:
+
+| Durum | Etiket | Açıklama |
+|---|---|---|
+| 🟢 | Ödeme Onaylandı / Aktif Aday | Dekont onaylandı, simülasyonda |
+| 🟡 | Ödeme Bekleniyor (Süre X kaldı) | IBAN, referans kod, dekont yükleme butonu |
+| 🔵 | Yedek Listede Bekliyor (Ücret Gerekmiyor) | Sıra kendisine gelmedi |
+| 🔴 | Ödeme Süresi Aşımı — Hak İptal | Süre içinde ödemedi, yedeğe devredildi |
+
+**Arka Plan Senkronizasyonu**: Admin dekont onayı verdiği saniye `odeme_durumu` alanı güncellenir; aday yenilediğinde 🟡 → 🟢 anında değişir.
+
+---
+
+## 22. Aday Başvuru Detay — Timeline / Olay Günlüğü
+
+Aday "Tercihlerim / Başvurularım" sekmesinden bir ilanı seçer → o ilana özel **dikey zaman çizelgesi** açılır:
+
+1. **Başvuru & Tercih Aşaması**: Başvuru tarihi, tercih programları
+2. **Puan & Kriter Doğrulama**: ÖSYM puan işleme, bonservis onay
+3. **Finansal Durum**: Ödeme Bekleniyor / Dekont Onaylandı / Muaf
+4. **Yerleştirme Sonucu**: Asil / X. Yedek / Yerleşemedi / Süre Aşımı
+5. **İtiraz ve Çağrı Geçmişi**: Bu ilan özelinde açılan destek talepleri + admin yanıtları
+
+Her adım kronolojik olarak tarih/saat bilgisiyle listelenir. Şeffaflık amacı — aday tüm süreç akışını tek bakışta görür.
+
+---
+
+## 23. Ana Sayfa Dinamik Takvim
+
+Ana sayfada **aylık takvim widget'ı** yer alır:
+- İlan başvuru başlangıç/bitiş, tercih son günü, sonuç tarihi otomatik olarak takvime işlenir
+- Kullanıcı bir günün üzerine tıklayınca **pop-up** ile o güne ait etkinlikler listelenir
+- Etkinliğe tıklayınca ilgili ilan detayına / ödeme ekranına yönlendirir
+- Admin ilanı yayınladığı an takvim otomatik güncellenir — manuel işlem yok
+- Tarih uzatılırsa takvim de anlık güncellenir
+
+---
+
+## 24. Ortak Notlar
 
 - **Renk kodlaması**: Sol tarafta kırmızı/kiremit (aksiyon), sağ tarafta gri (bilgilendirme)
 - **Kilit noktalar**: TCKN, Doğum Tarihi, Cinsiyet, OCR ile çekilen puanlar değiştirilemez

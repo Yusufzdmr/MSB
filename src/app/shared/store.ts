@@ -58,6 +58,9 @@ export type Ilan = {
   // ─ Ödeme
   odemeKurali?: OdemeKurali;
   ucretTutari?: number;              // TL
+  odemeVadeSaat?: number;            // Ödeme başladığından itibaren kaç saat
+  sehitGaziUcretMuaf?: boolean;      // Şehit/gazi yakınları ödemeden muaf mı?
+  iadeMekanizmasi?: boolean;         // Bu ilanda iade uygulanır mı?
   banka?: { ad: string; iban: string; alici: string };
   // ─ Ek tercih dönemi
   ekTercihAktif?: boolean;

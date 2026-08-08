@@ -1,7 +1,7 @@
 // Duyuru Detay — Referans 4 birebir: başlık, dosya ekleri, SONUÇ SORGULA (TCKN+Captcha), SONUÇ LİSTESİ.
 
 import { useMemo, useState, useEffect } from "react";
-import { ArrowLeft, Download, RotateCw, Search, X, FileText, AlertCircle, Info, Trophy } from "lucide-react";
+import { ArrowLeft, Download, RotateCw, Search, X, FileText, AlertCircle, Info, Trophy, CheckCircle2, Clock, CreditCard, XCircle } from "lucide-react";
 import { MSB } from "../shared/theme";
 import { useStore, type Duyuru, type DuyuruSonucKayit } from "../shared/store";
 
@@ -18,6 +18,8 @@ function generateCaptcha(): string {
 
 export default function DuyuruDetay({ duyuruId, onBack }: { duyuruId: string; onBack: () => void }) {
   const duyuru = useStore(s => s.duyurular.find(d => d.id === duyuruId)) as Duyuru | undefined;
+  const basvurular = useStore(s => s.basvurular);
+  const ilanlar = useStore(s => s.ilanlar);
   const [tc, setTc] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
   const [captcha, setCaptcha] = useState(generateCaptcha());
@@ -183,6 +185,43 @@ export default function DuyuruDetay({ duyuruId, onBack }: { duyuruId: string; on
                   <div className="text-[13px] font-bold text-[#333] leading-tight">{duyuru.baslik}</div>
                 </div>
               </div>
+
+              {/* Ödeme Durumu (yeni) */}
+              {(() => {
+                const bsv = basvurular.find(b => b.adayId === sonucGosterilen.tc && (b.ilanId === duyuru.ilanId || (duyuru.ilanId === undefined && b.durum === "yerlestirildi")));
+                const ilan = bsv ? ilanlar.find(i => i.id === bsv.ilanId) : null;
+                if (!bsv || !ilan?.odemeKurali || ilan.odemeKurali === "yok") return null;
+                let bg = "#F5F5F5", brd = "#DDD", fg = "#666", label = "", icon: React.ReactNode = null, extra: React.ReactNode = null;
+                if (sonucGosterilen.statu === "Yedek") {
+                  bg = "#DBEAF5"; brd = "#B6C7DE"; fg = "#1F5372"; label = "🔵 Yedek Listede Bekliyor (Ücret Gerekmiyor)"; icon = <Clock className="w-5 h-5" />;
+                  extra = <div className="text-[11.5px] mt-1 opacity-90">Sıranız asil listeye yükselene kadar herhangi bir ödeme yapmanız gerekmemektedir. Yerleştirmede sıranız geldiğinde bilgilendirileceksiniz.</div>;
+                } else if (bsv.odemeDurumu === "alindi") {
+                  bg = "#EEF6E8"; brd = "#C7DDB0"; fg = "#5E7F42"; label = "🟢 Ödeme Onaylandı / Aktif Aday"; icon = <CheckCircle2 className="w-5 h-5" />;
+                } else if (bsv.odemeDurumu === "iptal") {
+                  bg = "#FBECEE"; brd = "#E8B5BB"; fg = MSB.red; label = "🔴 Ödeme Süresi Aşımı — Hak İptal Edildi"; icon = <XCircle className="w-5 h-5" />;
+                  extra = <div className="text-[11.5px] mt-1 opacity-90">Tanınan süre içinde ödeme yapılmadığı/dekont onaylanmadığı için hakkınız düşürülmüş ve sıradaki yedeğe devredilmiştir.</div>;
+                } else {
+                  bg = MSB.warnBg; brd = MSB.warnBrd; fg = MSB.orange; label = "🟡 Ödeme Bekleniyor";
+                  icon = <CreditCard className="w-5 h-5" />;
+                  extra = <div className="mt-2 space-y-1 text-[12px]">
+                    <div>• <strong>IBAN</strong>: <span className="font-mono">{ilan.banka?.iban ?? "TR33 0006 1005 1978 6457 8413 26"}</span></div>
+                    <div>• <strong>Referans Kodu</strong>: <span className="font-mono">{bsv.referansKodu ?? "—"}</span></div>
+                    <div>• <strong>Tutar</strong>: {ilan.ucretTutari} TL</div>
+                    <div>• <strong>Kalan Süre</strong>: {ilan.odemeVadeSaat ?? 48} saat</div>
+                  </div>;
+                }
+                return (
+                  <div className="mb-4 p-4 rounded border-l-4" style={{ background: bg, borderColor: brd, borderLeftColor: fg, color: fg }}>
+                    <div className="flex items-start gap-3">
+                      {icon}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13.5px] font-bold uppercase mb-1">{label}</div>
+                        {extra}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Gerekçe uyarısı */}
               {sonucGosterilen.gerekce && (
