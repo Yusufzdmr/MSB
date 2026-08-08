@@ -757,10 +757,35 @@ function autoExpireIlanlar(s: State): State {
 let state: State = autoExpireIlanlar(loadInitial());
 const listeners = new Set<() => void>();
 
-// Periyodik olarak bitiş tarihi geçen ilanları "kapali" statüsüne çek (60sn'de bir)
+// Kesin kayıt süresi dolan asillerin hakkını otomatik düşür + yedek zincirini tetikle
+function autoKesinKayitSureAsimi(s: State): State {
+  const bugun = new Date().toISOString().slice(0, 10);
+  const suresiDolanIlanlar = s.ilanlar.filter(i => i.kesinKayitAktif && i.kesinKayitBitis && i.kesinKayitBitis < bugun);
+  if (suresiDolanIlanlar.length === 0) return s;
+  const guncelBasvurular = [...s.basvurular];
+  const yeniMesajlar: Mesaj[] = [];
+  const guncelYerlestirmeler = [...s.yerlestirmeler];
+  suresiDolanIlanlar.forEach(ilan => {
+    // Bu ilanda kesin kayıt "beklemede" veya "inceleniyor" kalmış olanlar süre aşımı
+    guncelBasvurular.forEach((bsv, idx) => {
+      if (bsv.ilanId !== ilan.id) return;
+      if (bsv.kesinKayitDurumu !== "beklemede" && bsv.kesinKayitDurumu !== "inceleniyor") return;
+      guncelBasvurular[idx] = { ...bsv, kesinKayitDurumu: "sure_asimi", durum: "yerlestirilmedi" };
+      yeniMesajlar.push({
+        id: genId("M"), konu: "Kesin Kayıt Süre Aşımı — Hak Kaybı",
+        icerik: `Tanınan süre içinde kesin kayıt işleminizi tamamlamadığınız için <strong>${ilan.baslik}</strong> için yerleşme hakkınız düşürülmüştür. Kontenjanınız yedek sıradaki adaya devredilecektir.`,
+        gonderen: "admin", alici: bsv.adayId, tarih: now(), okundu: false, tur: "hata", onemli: true, ilanId: ilan.id,
+      });
+    });
+  });
+  return { ...s, basvurular: guncelBasvurular, mesajlar: [...yeniMesajlar, ...s.mesajlar], yerlestirmeler: guncelYerlestirmeler };
+}
+
+// Periyodik: bitiş tarihi geçen ilanları "kapali" + kesin kayıt süresi geçen asilleri "sure_asimi" (60sn'de bir)
 if (typeof window !== "undefined") {
   setInterval(() => {
-    const yeni = autoExpireIlanlar(state);
+    let yeni = autoExpireIlanlar(state);
+    yeni = autoKesinKayitSureAsimi(yeni);
     if (yeni !== state) {
       state = yeni;
       notify();
@@ -1276,6 +1301,56 @@ export const actions = {
         : { ...b, kesinKayitDurumu: "beklemede", kesinKayitEvraklar: undefined, taahhutOnayi: false, kesinKayitRedNedeni: undefined });
       return s;
     }),
+
+  // Yedek Çağrı Listesini Tetikle (admin) — açıkta kalan kontenjan için sıradaki yedeği asile yükselt
+  yedekCagriTetikle: (ilanId: string) => {
+    let cagrilan = 0;
+    set(s => {
+      const ilan = s.ilanlar.find(i => i.id === ilanId);
+      if (!ilan) return s;
+      // Boş kontenjan hesabı: asilKontenjan - kayıt onaylanan
+      const onaylanan = s.basvurular.filter(b => b.ilanId === ilanId && b.kesinKayitDurumu === "onaylandi").length;
+      const suresiAsan = s.basvurular.filter(b => b.ilanId === ilanId && (b.kesinKayitDurumu === "sure_asimi" || b.kesinKayitDurumu === "feragat")).length;
+      const bosKontenjan = suresiAsan; // Her feragat/aşım için 1 yedeği yukarı al
+      if (bosKontenjan === 0) return s;
+      const y = s.yerlestirmeler.find(x => x.ilanId === ilanId && x.yayinlandi);
+      if (!y) return s;
+      // Sıradaki yedekleri asile yükselt (yedekSirasi küçükten büyüğe)
+      const yedekAdaylar = y.sonuclar
+        .filter(r => r.durum === "yedek")
+        .sort((a, b) => (a.yedekSirasi ?? 999) - (b.yedekSirasi ?? 999))
+        .slice(0, bosKontenjan);
+      if (yedekAdaylar.length === 0) return s;
+
+      s.yerlestirmeler = s.yerlestirmeler.map(z => z.id !== y.id ? z : {
+        ...z,
+        sonuclar: z.sonuclar.map(r => {
+          if (yedekAdaylar.find(x => x.adayId === r.adayId)) return { ...r, durum: "yerlesti" as const, yedekSirasi: undefined };
+          return r;
+        }),
+      });
+      // Yedek adaylara "asile yükselme" bildirimi + 3 gün ek süre başlat
+      const yeniBitis = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+      yedekAdaylar.forEach(r => {
+        const bsv = s.basvurular.find(b => b.adayId === r.adayId && b.ilanId === ilanId);
+        if (bsv) {
+          s.basvurular = s.basvurular.map(b => b.id === bsv.id ? { ...b, durum: "yerlestirildi", kesinKayitDurumu: "beklemede" } : b);
+        }
+        s.mesajlar = [{
+          id: genId("M"),
+          konu: "Sıranız Asil Listeye Yükseldi — Kesin Kayıt Hakkı Kazandınız",
+          icerik: `Asil adayın feragat/süre aşımı nedeniyle sıranız gelmiştir. <strong>${ilan.baslik}</strong> için Kesin Kayıt hakkı kazandınız.<br><br>Kayıt süresi: <strong>${yeniBitis}</strong> tarihine kadar (3 gün ek süre) evraklarınızı yükleyip başvurunuzu tamamlamanız gerekmektedir.`,
+          gonderen: "admin", alici: r.adayId, tarih: now(), okundu: false,
+          tur: "basari", onemli: true, ilanId,
+        }, ...s.mesajlar];
+        cagrilan++;
+      });
+      // İlanın kesin kayıt bitişini uzat (yedekler için ek 3 gün)
+      s.ilanlar = s.ilanlar.map(i => i.id === ilanId ? { ...i, kesinKayitBitis: yeniBitis } : i);
+      return s;
+    });
+    return cagrilan;
+  },
   kesinKayitAdminOnay: (basvuruId: string, onay: boolean, gerekce?: string) =>
     set(s => {
       s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b : {

@@ -55,12 +55,20 @@ export default function KesinKayitYonetimi() {
           <label className="block text-[11.5px] font-bold text-[#555] mb-1 uppercase">Kayıt Bitiş Tarihi</label>
           <input type="date" className={inputCls} value={bitisTarihi} onChange={e => setBitisTarihi(e.target.value)} />
         </div>
-        <div className="flex items-end">
+        <div className="flex items-end gap-2">
           {ilan?.kesinKayitAktif ? (
-            <div className="w-full">
-              <div className="text-[12px] text-[#5E7F42] font-semibold mb-1">✓ Kesin Kayıt Dönemi Aktif</div>
-              <div className="text-[11px] text-[#666]">Bitiş: {ilan.kesinKayitBitis}</div>
-            </div>
+            <>
+              <div className="flex-1">
+                <div className="text-[12px] text-[#5E7F42] font-semibold mb-1">✓ Kesin Kayıt Dönemi Aktif</div>
+                <div className="text-[11px] text-[#666]">Bitiş: {ilan.kesinKayitBitis}</div>
+              </div>
+              <Btn variant="light" size="sm" onClick={() => {
+                if (!confirm(`"${ilan.baslik}" için feragat/süre aşımı olan asillerin kontenjanı sıradaki yedeklere devredilsin mi?\n\nYedeklere 3 gün ek kayıt süresi verilir.`)) return;
+                const sayi = actions.yedekCagriTetikle(ilan.id);
+                if (sayi === 0) alert("Boşalmış kontenjan yok veya çağrılacak yedek bulunamadı.");
+                else alert(`${sayi} yedek aday asil listeye yükseltildi ve bildirim gönderildi.`);
+              }}>Yedek Çağrı Listesini Tetikle</Btn>
+            </>
           ) : (
             <Btn variant="success" onClick={baslat}><Play className="w-3.5 h-3.5" /> Kesin Kayıt Dönemini Başlat</Btn>
           )}

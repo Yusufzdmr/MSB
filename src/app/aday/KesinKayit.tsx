@@ -6,6 +6,7 @@ import {
   Upload, FileText, ShieldCheck, Check, X, AlertCircle, Download,
   Trash2, Award, XCircle, Clock,
 } from "lucide-react";
+// dosyaIndir yardımcısı zaten import edildi
 import { MSB } from "../shared/theme";
 import { useStore, actions } from "../shared/store";
 import { dosyaIndir } from "../shared/ui";
@@ -144,9 +145,24 @@ export default function KesinKayit({ adayId }: { adayId: string }) {
                 <button className={btnDrk} onClick={() => { actions.kesinKayitReset(aktif.id); setEvraklar({}); setTaahhut(false); }}>Belgeleri Düzelt ve Yeniden Yükle</button>
               </div>
             ) : aktif.kesinKayitDurumu === "feragat" ? (
-              <div className="p-8 text-center text-[#888]">
+              <div className="p-8 text-center">
                 <XCircle className="w-12 h-12 mx-auto text-[#AAA] mb-2" />
-                <div className="text-[14px]">Bu program için kayıt hakkınızdan feragat ettiniz. Bu işlem geri alınamaz.</div>
+                <div className="text-[14px] text-[#666] mb-4">Bu program için kayıt hakkınızdan feragat ettiniz. Bu işlem geri alınamaz.</div>
+                <button className={btnDrk + " mx-auto"} onClick={() => {
+                  const kod = `FRG-${aktif.adayId.slice(0, 5)}-${aktif.ilanId.slice(-6)}`;
+                  dosyaIndir(
+                    `T.C. MİLLÎ SAVUNMA BAKANLIĞI\nFERAGAT DİLEKÇESİ\n\nİlan: ${ilan.baslik}\nTCKN: ${aktif.adayId.slice(0, 3)}******${aktif.adayId.slice(-2)}\nFeragat Kodu: ${kod}\nTarih: ${new Date().toLocaleString("tr-TR")}\n\nBen, ${aktif.adayId} kimlik numaralı aday, ${ilan.baslik} programı için yerleşme hakkımdan KENDİ İRADEM İLE ve KALICI olarak feragat ettiğimi beyan ederim.\n\nBu belge resmi barkodlu / karekodlu Feragat Dilekçesidir. Dijital imzam kayıt altına alınmıştır.\n\nKontenjanım yedek listesindeki bir sonraki adaya otomatik olarak devredilmiştir.\n`,
+                    `feragat-${kod}.txt`
+                  );
+                }}>
+                  <Download className="w-3.5 h-3.5" /> Feragat Dilekçesi (Barkodlu PDF) İndir
+                </button>
+              </div>
+            ) : aktif.kesinKayitDurumu === "sure_asimi" ? (
+              <div className="p-8 text-center">
+                <AlertCircle className="w-12 h-12 mx-auto text-[#A82232] mb-2" />
+                <div className="text-[14px] text-[#A82232] font-bold mb-1">Süre Aşımı / Hak Kaybı</div>
+                <p className="text-[13px] text-[#666]">Tanınan süre içinde kesin kayıt işlemini tamamlamadığınız için hakkınız düşmüştür. Kontenjanınız yedeğe devredildi.</p>
               </div>
             ) : aktif.kesinKayitDurumu === "inceleniyor" ? (
               <div className="p-8 text-center">
