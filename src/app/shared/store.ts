@@ -1488,6 +1488,57 @@ export const actions = {
     set(s => { s.adaylar = [{ ...payload, kayitTarihi: now(), aktif: true }, ...s.adaylar]; return s; });
     return { ok: true };
   },
+  // Sadece validasyon — veritabanına yazmaz, kabul/red satırlarını döner
+  adaylarTopluDogrula: (rows: Array<Pick<Aday, "id" | "ad" | "soyad" | "eposta" | "telefon" | "sinavPuani"> & { sehitGaziMi?: boolean }>) => {
+    const kabul: typeof rows = []; const red: { row: typeof rows[number]; sebep: string }[] = [];
+    const mevcutIds = new Set(state.adaylar.map(a => a.id));
+    rows.forEach(r => {
+      if (!r.id?.trim()) red.push({ row: r, sebep: "TCKN boş" });
+      else if (!/^\d{11}$/.test(r.id)) red.push({ row: r, sebep: "TCKN 11 hane olmalı (hatalı hane uzunluğu)" });
+      else if (mevcutIds.has(r.id)) red.push({ row: r, sebep: "Mükerrer TCKN (sistemde zaten kayıtlı)" });
+      else if (kabul.some(k => k.id === r.id)) red.push({ row: r, sebep: "Dosya içi mükerrer TCKN" });
+      else if (!r.ad?.trim() || !r.soyad?.trim()) red.push({ row: r, sebep: "Ad veya Soyad boş" });
+      else kabul.push(r);
+    });
+    return { kabul, red };
+  },
+  // Kabul edilen satırları veritabanına yaz — validasyon sonrası "Aktar" onayı
+  adaylarTopluAktar: (kabul: Array<Pick<Aday, "id" | "ad" | "soyad" | "eposta" | "telefon" | "sinavPuani"> & { sehitGaziMi?: boolean; basvurulacakIlanId?: string }>) => {
+    set(s => {
+      const yeniler: Aday[] = kabul.map(r => ({
+        id: r.id, ad: r.ad, soyad: r.soyad, eposta: r.eposta, telefon: r.telefon,
+        dogumTarihi: "2000-01-01", cinsiyet: "Erkek", sehir: "—",
+        egitim: "Lise", sinavPuani: r.sinavPuani,
+        kayitTarihi: now(), kvkkOnayi: false, aktif: true,
+      }));
+      s.adaylar = [...yeniler, ...s.adaylar];
+      if (r_shg(kabul).length) {
+        s.profiller = [
+          ...r_shg(kabul).map(r => ({
+            adayId: r.id,
+            kimlik: { uyruk: "T.C." as Uyruk, kimlikNo: r.id, ad: r.ad, soyad: r.soyad, dogumTarihi: "", medeniHal: "" as "", cinsiyet: "Erkek" as const },
+            sehitGazi: { varMi: true },
+            egitimler: [], sinavlar: [], sorumlulukBeyani: false, kvkkOnayi: false, guncelleme: now(),
+          })),
+          ...s.profiller,
+        ];
+      }
+      // İlan/program seçimi varsa otomatik başvuru oluştur
+      const yeniBasvurular: Basvuru[] = [];
+      kabul.forEach(r => {
+        if (r.basvurulacakIlanId) {
+          yeniBasvurular.push({
+            id: genId("BSV"), adayId: r.id, ilanId: r.basvurulacakIlanId,
+            basvuruTarihi: now(), durum: "gonderildi", puan: r.sinavPuani,
+          });
+        }
+      });
+      if (yeniBasvurular.length) s.basvurular = [...yeniBasvurular, ...s.basvurular];
+      return s;
+    });
+    return kabul.length;
+  },
+  // Geriye dönük uyumluluk için (eski adaylarToplu tek adımlıydı)
   adaylarToplu: (rows: Array<Pick<Aday, "id" | "ad" | "soyad" | "eposta" | "telefon" | "sinavPuani"> & { sehitGaziMi?: boolean }>) => {
     const kabul: typeof rows = []; const red: { row: typeof rows[number]; sebep: string }[] = [];
     const mevcutIds = new Set(state.adaylar.map(a => a.id));
@@ -1504,21 +1555,25 @@ export const actions = {
         kayitTarihi: now(), kvkkOnayi: false, aktif: true,
       }));
       s.adaylar = [...yeniler, ...s.adaylar];
-      if (r_shg(kabul).length) {
-        // Şehit/gazi işaretli olanlar için profil oluştur
-        s.profiller = [
-          ...r_shg(kabul).map(r => ({
-            adayId: r.id,
-            kimlik: { uyruk: "T.C." as Uyruk, kimlikNo: r.id, ad: r.ad, soyad: r.soyad, dogumTarihi: "", medeniHal: "" as "", cinsiyet: "Erkek" as const },
-            sehitGazi: { varMi: true },
-            egitimler: [], sinavlar: [], sorumlulukBeyani: false, kvkkOnayi: false, guncelleme: now(),
-          })),
-          ...s.profiller,
-        ];
-      }
       return s;
     });
     return { kabul: kabul.length, red: red.length, redDetay: red };
+  },
+  // Manuel aday ekleme — ilan/program seçimi opsiyonlu
+  adayManuelEkleTamKayit: (payload: Omit<Aday, "kayitTarihi" | "aktif"> & { basvurulacakIlanId?: string }) => {
+    if (state.adaylar.some(a => a.id === payload.id)) return { ok: false, error: "TCKN zaten kayıtlı." };
+    const { basvurulacakIlanId, ...adayData } = payload;
+    set(s => {
+      s.adaylar = [{ ...adayData, kayitTarihi: now(), aktif: true }, ...s.adaylar];
+      if (basvurulacakIlanId) {
+        s.basvurular = [{
+          id: genId("BSV"), adayId: payload.id, ilanId: basvurulacakIlanId,
+          basvuruTarihi: now(), durum: "gonderildi", puan: payload.sinavPuani,
+        }, ...s.basvurular];
+      }
+      return s;
+    });
+    return { ok: true, sifre: Math.random().toString(36).slice(2, 8).toUpperCase() };
   },
 
   // ─ Reset (test/demo için)

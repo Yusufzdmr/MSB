@@ -13,15 +13,16 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
   const [siralama, setSiralama] = useState<"puan" | "kayit" | "ad">("puan");
   const [detay, setDetay] = useState<Aday | null>(null);
   const [manuelAcik, setManuelAcik] = useState(false);
-  const [tumTest, setTumTest] = useState<{ kabul: number; red: number; redDetay: { row: any; sebep: string }[] } | null>(null);
+  const [tumTest, setTumTest] = useState<{ kabul: number; red: number; redDetay: { row: any; sebep: string }[]; kabulSatirlari?: any[] } | null>(null);
+  const [validasyonYapildi, setValidasyonYapildi] = useState(false);
   const [topluAcik, setTopluAcik] = useState(false);
   const [csvText, setCsvText] = useState("");
-  const [yeniAday, setYeniAday] = useState<Partial<Aday>>({ egitim: "Lise", cinsiyet: "Erkek", ehliyet: [], sinavPuani: 0 });
+  const [yeniAday, setYeniAday] = useState<Partial<Aday> & { basvurulacakIlanId?: string }>({ egitim: "Lise", cinsiyet: "Erkek", ehliyet: [], sinavPuani: 0 });
 
   const manuelKaydet = () => {
     if (!yeniAday.id || !/^\d{11}$/.test(yeniAday.id)) return alert("Geçerli 11 haneli TCKN girin.");
     if (!yeniAday.ad || !yeniAday.soyad) return alert("Ad ve Soyad zorunlu.");
-    const r = actions.adayManuelEkle({
+    const r = actions.adayManuelEkleTamKayit({
       id: yeniAday.id, ad: yeniAday.ad.toLocaleUpperCase("tr"), soyad: yeniAday.soyad.toLocaleUpperCase("tr"),
       eposta: yeniAday.eposta ?? "", telefon: yeniAday.telefon ?? "",
       dogumTarihi: yeniAday.dogumTarihi ?? "2000-01-01",
@@ -30,9 +31,16 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
       egitim: (yeniAday.egitim ?? "Lise") as EgitimSeviyesi,
       sinavPuani: Number(yeniAday.sinavPuani ?? 0),
       kvkkOnayi: false,
+      basvurulacakIlanId: yeniAday.basvurulacakIlanId,
     });
-    if (r.ok) { alert(`Aday oluşturuldu. Geçici şifre: ${Math.random().toString(36).slice(2, 8).toUpperCase()}`); setManuelAcik(false); setYeniAday({ egitim: "Lise", cinsiyet: "Erkek", ehliyet: [], sinavPuani: 0 }); }
-    else alert(r.error);
+    if (r.ok) {
+      const ilanBilgi = yeniAday.basvurulacakIlanId
+        ? `\n\nİlana otomatik başvuru oluşturuldu: ${store.ilanlar.find(x => x.id === yeniAday.basvurulacakIlanId)?.baslik}`
+        : "";
+      alert(`✓ Aday oluşturuldu.\n\nOtomatik geçici şifre: ${r.sifre}${ilanBilgi}`);
+      setManuelAcik(false);
+      setYeniAday({ egitim: "Lise", cinsiyet: "Erkek", ehliyet: [], sinavPuani: 0 });
+    } else alert(r.error);
   };
 
   const sablonIndir = () => {
@@ -45,6 +53,7 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
     URL.revokeObjectURL(url);
   };
 
+  // Aşama 1: Sadece validasyon — henüz veritabanına yazılmaz
   const csvIsle = () => {
     const satirlar = csvText.split(/\r?\n/).filter(x => x.trim());
     if (satirlar.length < 2) return alert("Boş dosya.");
@@ -55,8 +64,17 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
       sinavPuani: Number(c[5].trim() || "0"),
       sehitGaziMi: (c[6] ?? "").trim().toLowerCase() === "true",
     }));
-    const sonuc = actions.adaylarToplu(rows);
-    setTumTest(sonuc);
+    const { kabul, red } = actions.adaylarTopluDogrula(rows);
+    setTumTest({ kabul: kabul.length, red: red.length, redDetay: red, kabulSatirlari: kabul });
+    setValidasyonYapildi(true);
+  };
+  // Aşama 2: Onaylanan satırları veritabanına aktar
+  const csvAktar = () => {
+    if (!tumTest?.kabulSatirlari?.length) return alert("Aktarılacak hatasız kayıt yok.");
+    if (!confirm(`${tumTest.kabul} hatasız kaydı veritabanına aktarmak istediğinize emin misiniz?`)) return;
+    const sayi = actions.adaylarTopluAktar(tumTest.kabulSatirlari);
+    alert(`✓ ${sayi} aday başarıyla veritabanına aktarıldı.`);
+    setTopluAcik(false); setTumTest(null); setCsvText(""); setValidasyonYapildi(false);
   };
 
   useEffect(() => { if (qGlobal) setQ(qGlobal); }, [qGlobal]);
@@ -128,16 +146,31 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
           <Field label="Eğitim"><select className={selectCls} value={yeniAday.egitim ?? "Lise"} onChange={e => setYeniAday({ ...yeniAday, egitim: e.target.value as EgitimSeviyesi })}>
             <option>Lise</option><option>Ön Lisans</option><option>Lisans</option><option>Yüksek Lisans</option><option>Doktora</option>
           </select></Field>
+          <div className="col-span-2">
+            <Field label="Başvuracağı İlan / Program" hint="Seçilirse aday oluşturulur oluşturulmaz otomatik başvuru kaydı açılır.">
+              <select className={selectCls} value={yeniAday.basvurulacakIlanId ?? ""} onChange={e => setYeniAday({ ...yeniAday, basvurulacakIlanId: e.target.value || undefined })}>
+                <option value="">Başvuru oluşturma (sadece aday kaydı)</option>
+                {store.ilanlar.filter(i => i.durum === "yayin" || i.durum === "taslak").map(i => (
+                  <option key={i.id} value={i.id}>{i.baslik}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
         </div>
       </Modal>
 
-      {/* Excel toplu modal */}
-      <Modal open={topluAcik} onClose={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); }} size="lg"
+      {/* Excel toplu modal — iki aşamalı: Doğrula → (rapor) → Aktar */}
+      <Modal open={topluAcik} onClose={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); setValidasyonYapildi(false); }} size="lg"
         title="Excel / CSV ile Toplu Aday Yükleme"
         footer={<>
-          <Btn variant="ghost" onClick={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); }}>Kapat</Btn>
-          {!tumTest && <Btn onClick={csvIsle} disabled={!csvText.trim()}>İçeri Aktar (Validasyon)</Btn>}
-          {tumTest && <Btn variant="success" onClick={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); }}>Tamam</Btn>}
+          <Btn variant="ghost" onClick={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); setValidasyonYapildi(false); }}>Kapat</Btn>
+          {!validasyonYapildi && <Btn onClick={csvIsle} disabled={!csvText.trim()}>Doğrula & Rapor Al</Btn>}
+          {validasyonYapildi && tumTest && tumTest.kabul > 0 && (
+            <Btn variant="success" onClick={csvAktar}>Hatasız {tumTest.kabul} Kaydı Aktar</Btn>
+          )}
+          {validasyonYapildi && (
+            <Btn variant="light" onClick={() => { setTumTest(null); setValidasyonYapildi(false); }}>Yeniden Doğrula</Btn>
+          )}
         </>}>
         <div className="space-y-3">
           <div className="p-3 rounded border" style={{ background: MSB.infoBg, borderColor: MSB.infoBrd, color: MSB.infoText }}>
@@ -148,7 +181,7 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Btn variant="light" onClick={sablonIndir}><Download className="w-3.5 h-3.5" /> Şablon .CSV İndir</Btn>
+            <Btn variant="light" onClick={sablonIndir}><Download className="w-3.5 h-3.5" /> Şablon .XLSX/.CSV İndir</Btn>
             <label className="inline-flex items-center gap-1.5 h-[32px] px-3.5 text-[12.5px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCC] rounded cursor-pointer">
               <Upload className="w-3.5 h-3.5" /> Dosya Seç
               <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => {
@@ -162,24 +195,60 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
             value={csvText} onChange={e => setCsvText(e.target.value)} />
 
           {tumTest && (
-            <div className="mt-3 border border-[#DDD] rounded overflow-hidden">
-              <div className="px-4 py-2.5 bg-[#F5F5F5] border-b flex items-center justify-between">
-                <div className="text-[12.5px] font-bold">
-                  <span className="text-[#5E7F42]">{tumTest.kabul} kayıt başarıyla aktarıldı</span>
-                  {tumTest.red > 0 && <span className="text-[#A82232] ml-3">{tumTest.red} kayıt reddedildi</span>}
+            <div className="mt-3 space-y-3">
+              {/* Özet bilgi kutusu (spec formatı) */}
+              <div className="p-3 rounded border" style={{
+                background: tumTest.red > 0 ? MSB.warnBg : "#EEF6E8",
+                borderColor: tumTest.red > 0 ? MSB.warnBrd : "#C7DDB0",
+                color: tumTest.red > 0 ? MSB.orange : "#5E7F42",
+              }}>
+                <div className="text-[13px] font-bold mb-1">
+                  {tumTest.red > 0 && tumTest.kabul > 0 && `⚠ ${tumTest.red} veri hatalı, düzeltip tekrar yükleyin veya hatasız ${tumTest.kabul} kaydı içeri aktarın.`}
+                  {tumTest.red > 0 && tumTest.kabul === 0 && `❌ ${tumTest.red} kayıt hatalı; hatasız kayıt yok. Lütfen dosyayı düzeltip tekrar yükleyin.`}
+                  {tumTest.red === 0 && `✓ ${tumTest.kabul} kayıt doğrulama testinden başarıyla geçti. Aktarmak için "Hatasız ${tumTest.kabul} Kaydı Aktar" butonuna basın.`}
                 </div>
               </div>
+              {/* Hatalı satırlar */}
               {tumTest.red > 0 && (
-                <table className="w-full text-[11.5px]">
-                  <thead><tr className="bg-[#FBECEE] text-[#A82232]"><th className="px-3 py-1.5 text-left">TCKN</th><th className="px-3 py-1.5 text-left">Ad Soyad</th><th className="px-3 py-1.5 text-left">Sebep</th></tr></thead>
-                  <tbody>{tumTest.redDetay.map((r, i) => (
-                    <tr key={i} className={i % 2 === 0 ? "" : "bg-[#FAFAFA]"}>
-                      <td className="px-3 py-1.5 tabular-nums">{r.row.id}</td>
-                      <td className="px-3 py-1.5">{r.row.ad} {r.row.soyad}</td>
-                      <td className="px-3 py-1.5 text-[#A82232]">{r.sebep}</td>
-                    </tr>
-                  ))}</tbody>
-                </table>
+                <div className="border border-[#E8B5BB] rounded overflow-hidden">
+                  <div className="px-3 py-2 bg-[#FBECEE] text-[#A82232] font-bold text-[11.5px] uppercase">Reddedilen Kayıtlar ({tumTest.red})</div>
+                  <table className="w-full text-[11.5px]">
+                    <thead><tr className="bg-[#FCEEF0] text-[#A82232]"><th className="px-3 py-1.5 text-left">TCKN</th><th className="px-3 py-1.5 text-left">Ad Soyad</th><th className="px-3 py-1.5 text-left">Sebep</th></tr></thead>
+                    <tbody>{tumTest.redDetay.map((r, i) => (
+                      <tr key={i} className={i % 2 === 0 ? "" : "bg-[#FAFAFA]"}>
+                        <td className="px-3 py-1.5 tabular-nums">{r.row.id || <em>boş</em>}</td>
+                        <td className="px-3 py-1.5">{r.row.ad} {r.row.soyad}</td>
+                        <td className="px-3 py-1.5 text-[#A82232]">{r.sebep}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+              {/* Kabul edilenlerin önizlemesi */}
+              {tumTest.kabul > 0 && tumTest.kabulSatirlari && (
+                <div className="border border-[#C7DDB0] rounded overflow-hidden">
+                  <div className="px-3 py-2 bg-[#EEF6E8] text-[#5E7F42] font-bold text-[11.5px] uppercase flex items-center justify-between">
+                    <span>Hatasız Kayıtlar ({tumTest.kabul}) — Aktarım öncesi önizleme</span>
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    <table className="w-full text-[11.5px]">
+                      <thead><tr className="bg-[#F5F5F5]"><th className="px-3 py-1.5 text-left">TCKN</th><th className="px-3 py-1.5 text-left">Ad Soyad</th><th className="px-3 py-1.5 text-right">Puan</th><th className="px-3 py-1.5 text-center">Şht/Gazi</th></tr></thead>
+                      <tbody>{tumTest.kabulSatirlari.slice(0, 20).map((r, i) => (
+                        <tr key={i} className={i % 2 === 0 ? "" : "bg-[#FAFAFA]"}>
+                          <td className="px-3 py-1.5 tabular-nums">{r.id}</td>
+                          <td className="px-3 py-1.5">{r.ad} {r.soyad}</td>
+                          <td className="px-3 py-1.5 tabular-nums text-right">{r.sinavPuani}</td>
+                          <td className="px-3 py-1.5 text-center">{r.sehitGaziMi ? "✓" : "—"}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                    {tumTest.kabulSatirlari.length > 20 && (
+                      <div className="p-2 text-center text-[11px] text-[#888] italic bg-[#FAFAFA]">
+                        ... ve {tumTest.kabulSatirlari.length - 20} kayıt daha
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}
