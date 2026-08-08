@@ -597,24 +597,16 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
             <div className="relative w-[260px] bg-[#F5F5F5] border border-[#DDDDDD] p-2 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
               <div className="relative aspect-[3/4] bg-[#1F1F1F] overflow-hidden">
                 <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Atat%C3%BCrk1930s.jpg/500px-Atat%C3%BCrk1930s.jpg"
+                  src="/ataturk.jpg"
                   alt="Gazi Mustafa Kemal Atatürk — Türkiye Cumhuriyeti Kurucusu"
                   className="w-full h-full object-cover object-top"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
+                  loading="eager"
                   onError={(e) => {
-                    // Wikimedia erişilmezse yerel/fallback SVG göster
                     const el = e.currentTarget as HTMLImageElement;
                     if (!el.dataset.fallback) {
                       el.dataset.fallback = "1";
-                      el.src = "data:image/svg+xml;utf8," + encodeURIComponent(
-                        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 260'>
-                          <rect width='200' height='260' fill='#2C2C2C'/>
-                          <ellipse cx='100' cy='115' rx='48' ry='60' fill='#4A3F2C'/>
-                          <path d='M20 260 Q100 160 180 260 Z' fill='#1A1A1A'/>
-                          <text x='100' y='250' font-family='serif' font-size='9' fill='#888' text-anchor='middle'>Görsel yüklenemedi</text>
-                        </svg>`
-                      );
+                      // Yerel dosya yüklenemezse Wikimedia FilePath API (kararlı)
+                      el.src = "https://commons.wikimedia.org/wiki/Special:FilePath/Ataturk1930s.jpg?width=600";
                     }
                   }}
                 />
