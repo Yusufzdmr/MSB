@@ -617,6 +617,38 @@ const seedDuyurular: Duyuru[] = [
     kategori: "belge", onemli: false,
     yayinTarihi: "2026-07-18T15:00:00.000Z", yayinlayan: "Bilgi İşlem",
   },
+  {
+    id: "D-004",
+    baslik: "MSB KARA, DENİZ VE HAVA KUVVETLERİ KOMUTANLIKLARI 2026 YILI (2026/3 DÖNEM) UZMAN ERBAŞ TEMİN FAALİYETİ",
+    ozet: "2026/3 Dönem Uzman Erbaş temin faaliyeti başvuruya açılmıştır. Son başvuru tarihi 17 Ağustos 2026, saat 23.59.",
+    icerik:
+`<p><strong>1.</strong>&nbsp;&nbsp;&nbsp;&nbsp;Millî Savunma Bakanlığı 2026 Yılı (2026/3 Dönem) Kara, Deniz ve Hava Kuvvetleri Komutanlıkları Uzman Erbaş temin faaliyeti başvuruya açılmış, temine yönelik hususlar ayrıntılı olarak Başvuru Kılavuzunda belirtilmiştir.</p>
+<p><strong>2.</strong>&nbsp;&nbsp;&nbsp;&nbsp;Başvurular;</p>
+<p style="margin-left:24px">a)&nbsp;&nbsp;&nbsp;&nbsp;Başvuru Kılavuzunda belirtilen esaslar dâhilinde çevrimiçi (online) olarak <em>https://personeltemin.msb.gov.tr</em> internet adresinden e-devlet ile giriş yapılarak gerçekleştirilecektir.</p>
+<p style="margin-left:24px">b)&nbsp;&nbsp;&nbsp;&nbsp;Çevrimiçi (online) başvuru yapılması ve sonrasında sınav ücretlerinin T.C. Vakıflar Bankasının internet/mobil bankacılık uygulaması veya ATM cihazları üzerinden ödenmesi ile tamamlanacaktır.</p>
+<p><strong>3.</strong>&nbsp;&nbsp;&nbsp;&nbsp;Sınav Ücretleri;</p>
+<p style="margin-left:24px">a)&nbsp;&nbsp;&nbsp;&nbsp;Sınav ücreti <strong>250 (ikiyüzelli) TL</strong>'dir. Sınav ücretini yatırmayan adayların başvuruları geçersiz sayılacaktır.</p>
+<p style="margin-left:24px">b)&nbsp;&nbsp;&nbsp;&nbsp;Sınav ücretleri; T.C. Vakıflar Bankasının internet/mobil bankacılık uygulaması veya ATM cihazları üzerinden <em>Ödemeler → Eğitim ve Sınav Ödemeleri → Sınav Ödemeleri → Millî Savunma Bakanlığı Personel Sınav Ödemeleri</em> ekranından yatırılacaktır.</p>
+<p><strong>4.</strong>&nbsp;&nbsp;&nbsp;&nbsp;Son başvuru tarihi <strong>17 Ağustos 2026 (saat 23.59'a kadar)</strong> olup, sınav ücretlerinin en geç <strong>18 Ağustos 2026 (saat 23.30'a kadar)</strong> tarihine kadar ödenmesi gerekmektedir.</p>
+<p><strong>5.</strong>&nbsp;&nbsp;&nbsp;&nbsp;Adaylar;</p>
+<p style="margin-left:24px">a)&nbsp;&nbsp;&nbsp;&nbsp;Başvuru yapmadan önce mutlaka başvuru kılavuzu ve başvuru şartlarını dikkatle okumalıdırlar.</p>
+<p style="margin-left:24px">b)&nbsp;&nbsp;&nbsp;&nbsp;Başvuru ekranına e-devlet üzerinden giriş yapacak, "Bilgilerim" kısmından eğitim, iletişim, askerlik ve diğer bilgileri mutlaka eksiksiz dolduracak, ardından Tercih ekranından başvuru/tercih işlemini yapacaklardır.</p>
+<p style="margin-left:24px">c)&nbsp;&nbsp;&nbsp;&nbsp;Sınav ücreti ödeme işlemi sonrası ödeme bilgilerini <em>Tercihlerim</em> sayfasından kontrol edeceklerdir.</p>
+<p style="margin-left:24px">ç)&nbsp;&nbsp;&nbsp;&nbsp;Tercih yaparken; K.K.K.lığı, Dz.K.K.lığı, Hv.K.K.lığı ve K.K.K.lığı Komando Branşı arasından tercih önceliğine göre <strong>en az dört tercih</strong> yapılması gerekmektedir.</p>
+<p style="margin-left:24px">d)&nbsp;&nbsp;&nbsp;&nbsp;Bu 4 kuvvet için tek (aynı) sınava katılacaklardır.</p>
+<p style="margin-left:24px">e)&nbsp;&nbsp;&nbsp;&nbsp;Başvuru kılavuzunda belirtilen belgeleri eksiksiz hazırlayarak sınav günü yanlarında getireceklerdir.</p>
+<p style="margin-left:24px">f)&nbsp;&nbsp;&nbsp;&nbsp;Sağlık raporu işlemleri MSB'nin belirlediği süre içinde tamamlanacaktır; geç ulaşan/hatalı raporlarda adaylık sonlandırılır.</p>
+<p><strong>6.</strong>&nbsp;&nbsp;&nbsp;&nbsp;Sınavlarda başarılı olan adaylar;</p>
+<p style="margin-left:24px">a)&nbsp;&nbsp;&nbsp;&nbsp;Başvuru esnasında belirttikleri tercih sırası, başarı sıralaması, kontenjan ve idarenin ihtiyaçlarına göre kuvvet komutanlıklarına ayrılacaktır.</p>
+<p style="margin-left:24px">b)&nbsp;&nbsp;&nbsp;&nbsp;Sahip oldukları diploma, sertifika, millî sporcu belgesi, bonservis, mesleki eğitim belgesi vb. dikkate alınarak sınıflandırılacaktır.</p>`,
+    kategori: "genel", onemli: true,
+    yayinTarihi: "2026-08-07T09:00:00.000Z", yayinlayan: "Personel Temin Daire Başkanlığı",
+    ilanId: "IL-2026-002",   // Sözleşmeli Er ilanına bağlı (mock)
+    sonucSorgulamaAktif: false,
+    ekler: [
+      { ad: "2026-3 ORTAK Uzman Erbaş Başvuru Kılavuzu (07.08.2026) (UZATMA ONAYLI).pdf", boyutKB: 1420 },
+    ],
+  },
 ];
 
 const seedBasvurular: Basvuru[] = [

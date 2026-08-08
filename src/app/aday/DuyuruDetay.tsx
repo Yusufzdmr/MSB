@@ -64,18 +64,40 @@ export default function DuyuruDetay({ duyuruId, onBack }: { duyuruId: string; on
         <p className="text-[13.5px] text-[#555]">{duyuru.ozet}</p>
       </div>
 
-      {/* ═══ YÖNLENDİRİCİ KURALLAR ═══ */}
-      <div className="bg-white border border-[#DDDDDD] rounded p-5 mb-4">
-        <ol className="text-[13px] text-[#333] space-y-1.5 list-decimal ml-5">
-          <li>Sonucunuzu görebilmek için aşağıda yer alan <strong>Sonuç Sorgula</strong> alanına TC Kimlik numaranız ile giriş yapmalısınız.</li>
-          <li>Taban puanlar ve genel kılavuz/tablo ekleri için aşağıdaki <strong>"Duyuruya İlişkin Dosyalar"</strong> bölümünden ilgili PDF/Excel'i indirebilirsiniz.</li>
-        </ol>
-        {duyuru.icerik && (
-          <div className="mt-3 pt-3 border-t border-[#EEE] text-[13px] text-[#555] leading-relaxed whitespace-pre-line">
-            {duyuru.icerik}
+      {/* ═══ YÖNLENDİRİCİ KURALLAR — sadece sonuç sorgulama aktifse ═══ */}
+      {duyuru.sonucSorgulamaAktif && (
+        <div className="bg-white border border-[#DDDDDD] rounded p-5 mb-4">
+          <ol className="text-[13px] text-[#333] space-y-1.5 list-decimal ml-5">
+            <li>Sonucunuzu görebilmek için aşağıda yer alan <strong>Sonuç Sorgula</strong> alanına TC Kimlik numaranız ile giriş yapmalısınız.</li>
+            <li>Taban puanlar ve genel kılavuz/tablo ekleri için aşağıdaki <strong>"Duyuruya İlişkin Dosyalar"</strong> bölümünden ilgili PDF/Excel'i indirebilirsiniz.</li>
+          </ol>
+        </div>
+      )}
+
+      {/* ═══ İÇERİK METNİ (HTML render — numaralı maddeler, tablo vb.) ═══ */}
+      {duyuru.icerik && (
+        <div className="bg-white border border-[#DDDDDD] rounded p-6 mb-4">
+          <div className="text-[13.5px] text-[#333] leading-[1.75] whitespace-pre-line prose-sm max-w-none"
+            style={{ fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" }}
+            dangerouslySetInnerHTML={{ __html: duyuru.icerik }} />
+        </div>
+      )}
+
+      {/* ═══ BAŞVURU YAP butonu — ilanId varsa (başvuru duyurusu) ═══ */}
+      {duyuru.ilanId && !duyuru.sonucSorgulamaAktif && (
+        <div className="bg-[#FBECEE] border-l-4 border-[#A82232] p-4 mb-4 flex items-center gap-4">
+          <div className="flex-1">
+            <h3 className="text-[15px] font-bold text-[#A82232] mb-0.5">Başvuru yapmak için tıklayınız</h3>
+            <p className="text-[12.5px] text-[#666]">Bu duyuruya ait ilana e-Devlet üzerinden giriş yaparak başvurabilirsiniz.</p>
           </div>
-        )}
-      </div>
+          <button
+            onClick={() => alert("Giriş ekranına yönlendiriliyorsunuz — e-Devlet ile giriş yapıp Tercih ekranından başvurunuzu tamamlayınız.")}
+            className="inline-flex items-center gap-2 h-[40px] px-5 text-[13.5px] font-bold text-white rounded-[3px] shadow"
+            style={{ background: MSB.red }}>
+            <FileText className="w-4 h-4" /> Başvuru Yapmak İçin Tıklayınız
+          </button>
+        </div>
+      )}
 
       {/* ═══ DUYURUYA İLİŞKİN DOSYALAR ═══ */}
       <div className="bg-white border border-[#DDDDDD] rounded mb-4">
