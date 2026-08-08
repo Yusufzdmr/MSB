@@ -8,8 +8,13 @@ import {
   CheckCircle2, Circle, Dot, BarChart3, TrendingUp, Zap,
   Lock, Eye, EyeOff, KeyRound, ChevronLeft, Home, Briefcase,
   MessageSquare, Settings, LogOut, User as UserIcon, PieChart, Activity,
-  Fingerprint, RotateCcw, BadgeCheck, Landmark, ScrollText, Moon
+  Fingerprint, RotateCcw, BadgeCheck, Landmark, ScrollText, Moon,
+  ScanLine, Trophy
 } from "lucide-react";
+import AdminScreen from "./admin/AdminScreen";
+import OcrYukle from "./aday/OcrYukle";
+import SonucEkrani from "./aday/SonucEkrani";
+import { actions as storeActions } from "./shared/store";
 
 // Turkish flag & institutional palette
 const TR = {
@@ -90,7 +95,8 @@ function GovStrip() {
   );
 }
 
-type Screen = "listings" | "detail" | "announcements" | "login" | "register" | "forgot" | "dashboard" | "edevlet";
+type Screen = "listings" | "detail" | "announcements" | "login" | "register" | "forgot" | "dashboard" | "edevlet"
+  | "admin" | "aday-ocr" | "aday-sonuc";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA
@@ -1595,8 +1601,8 @@ function PasswordInput({ value, onChange, placeholder = "Şifreniz" }: {
 // SCREEN 4 — LOGIN
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LoginScreen({ onHome, onRegister, onForgot, onDashboard, onEdevlet }: {
-  onHome: () => void; onRegister: () => void; onForgot: () => void; onDashboard: () => void; onEdevlet: () => void;
+function LoginScreen({ onHome, onRegister, onForgot, onDashboard, onEdevlet, onAdmin }: {
+  onHome: () => void; onRegister: () => void; onForgot: () => void; onDashboard: () => void; onEdevlet: () => void; onAdmin: () => void;
 }) {
   const [tc, setTc] = useState("");
   const [pw, setPw] = useState("");
@@ -1612,7 +1618,13 @@ function LoginScreen({ onHome, onRegister, onForgot, onDashboard, onEdevlet }: {
     }
     setError(null);
     setLoading(true);
-    setTimeout(() => { setLoading(false); onDashboard(); }, 900);
+    setTimeout(() => {
+      setLoading(false);
+      // Admin kısayolu: 11 haneli 9 → yönetici paneline
+      if (tc === "99999999999") { storeActions.girisAdmin("yonetici@msb.gov.tr"); onAdmin(); return; }
+      storeActions.girisAday(tc);
+      onDashboard();
+    }, 900);
   };
 
   return (
@@ -1679,6 +1691,13 @@ function LoginScreen({ onHome, onRegister, onForgot, onDashboard, onEdevlet }: {
         {/* Small footnote link to the demo e-Devlet mock screen */}
         <button type="button" onClick={onEdevlet} className="w-full text-center text-[11px] text-slate-500 hover:text-[#E30A17] transition-colors pt-1">
           e-Devlet mock ekranını göster (demo) →
+        </button>
+
+        {/* Admin quick access */}
+        <button type="button" onClick={onAdmin}
+          className="w-full flex items-center justify-center gap-2 py-2 mt-1 border border-dashed border-[#A82232]/40 rounded-lg text-[11.5px] font-bold text-[#A82232] hover:bg-[#A82232]/[0.04] transition-colors">
+          <Shield className="w-3.5 h-3.5" strokeWidth={2} />
+          Yönetici Konsoluna Git (Demo)
         </button>
 
         <p className="text-center text-[13px] text-slate-500 pt-2">
@@ -2449,7 +2468,7 @@ const btnCls   = "inline-flex items-center gap-2 px-3.5 py-1.5 text-[13px] font-
 const btnLight = "inline-flex items-center gap-2 px-3.5 py-1.5 text-[13px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCCCCC] rounded-[3px] transition-colors";
 const btnGhost = "inline-flex items-center gap-1.5 px-3 py-1.5 text-[12.5px] font-semibold text-[#555] bg-white hover:bg-[#F5F5F5] border border-[#DDDDDD] rounded-[3px] transition-colors";
 
-function DashboardScreen({ onLogout }: { onLogout: () => void }) {
+function DashboardScreen({ onLogout, onOcr, onSonuc }: { onLogout: () => void; onOcr: () => void; onSonuc: () => void }) {
   const [view, setView] = useState<"bilgilerim" | "cagriTakip" | "cagriSinav" | "mesajlar" | "saglik" | "tercihYap" | "tercihlerim">("bilgilerim");
   const [tercihGroupOpen, setTercihGroupOpen] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
@@ -2599,7 +2618,21 @@ function DashboardScreen({ onLogout }: { onLogout: () => void }) {
                 <span>{titleMap[view]}</span>
               </nav>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={onOcr}
+                className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[12px] font-bold text-white rounded-[3px] border transition-colors"
+                style={{ background: MSB.red, borderColor: MSB.redDark }}
+                onMouseEnter={e => (e.currentTarget.style.background = MSB.redHover)}
+                onMouseLeave={e => (e.currentTarget.style.background = MSB.red)}>
+                <ScanLine className="w-3.5 h-3.5" strokeWidth={2.5} /> OCR ile Belge Yükle
+              </button>
+              <button onClick={onSonuc}
+                className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[12px] font-bold rounded-[3px] border transition-colors bg-white"
+                style={{ color: MSB.red, borderColor: MSB.red }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#FBECEE")}
+                onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
+                <Trophy className="w-3.5 h-3.5" strokeWidth={2.5} /> Sonucumu Gör
+              </button>
               <button onClick={() => toast("Yardım kılavuzu açıldı", { kind: "info", sub: "Bilgi doldurma rehberi" })} className={btnGhost}><span className="text-[#A82232] font-bold">?</span> Bilgilerimi nasıl doldururum</button>
               <button onClick={() => toast("Tercih kılavuzu açıldı", { kind: "info", sub: "Tercih yapma rehberi" })} className={btnGhost}><span className="text-[#A82232] font-bold">?</span> Nasıl tercih yaparım</button>
               <button onClick={() => toast("Sayfa yenilendi", { kind: "success" })} className="w-[34px] h-[30px] flex items-center justify-center bg-white border border-[#DDDDDD] rounded-[3px] hover:bg-[#F5F5F5] transition-colors" title="Yenile">
@@ -2893,6 +2926,9 @@ function ScreenTabs({ active, onSwitch }: { active: Screen; onSwitch: (s: Screen
     { id: "forgot",        label: "⑥ Şifremi Unuttum" },
     { id: "edevlet",       label: "⑦ e-Devlet Girişi" },
     { id: "dashboard",     label: "⑧ Aday Dashboard" },
+    { id: "aday-ocr",      label: "⑨ OCR Belge Yükle" },
+    { id: "aday-sonuc",    label: "⑩ Yerleştirme Sonucu" },
+    { id: "admin",         label: "⑪ Yönetici Konsolu" },
   ];
   return (
     <div className="bg-[#F8FAFC] border-b border-slate-200 shadow-[inset_0_-1px_0_rgba(0,0,0,0.04)]">
@@ -2925,6 +2961,9 @@ function DemoSwitcher({ active, onSwitch }: { active: Screen; onSwitch: (s: Scre
     { id: "forgot",        label: "⑥ Şifremi Unuttum" },
     { id: "edevlet",       label: "⑦ e-Devlet Girişi" },
     { id: "dashboard",     label: "⑧ Aday Dashboard" },
+    { id: "aday-ocr",      label: "⑨ OCR Belge Yükle" },
+    { id: "aday-sonuc",    label: "⑩ Yerleştirme Sonucu" },
+    { id: "admin",         label: "⑪ Yönetici Konsolu" },
   ];
   return (
     <div className="fixed bottom-5 right-5 z-[100]">
@@ -3041,11 +3080,14 @@ export default function App() {
       {screen === "listings"      && <Screen1 onDetail={() => setScreen("detail")} onNav={setScreen} />}
       {screen === "detail"        && <Screen2 onBack={() => setScreen("listings")} />}
       {screen === "announcements" && <Screen3 />}
-      {screen === "login"    && <LoginScreen    onHome={() => setScreen("listings")} onRegister={() => setScreen("register")} onForgot={() => setScreen("forgot")} onDashboard={() => setScreen("dashboard")} onEdevlet={() => setScreen("edevlet")} />}
+      {screen === "login"    && <LoginScreen    onHome={() => setScreen("listings")} onRegister={() => setScreen("register")} onForgot={() => setScreen("forgot")} onDashboard={() => setScreen("dashboard")} onEdevlet={() => setScreen("edevlet")} onAdmin={() => setScreen("admin")} />}
       {screen === "register" && <RegisterScreen onHome={() => setScreen("listings")} onLogin={() => setScreen("login")} onDashboard={() => setScreen("dashboard")} />}
       {screen === "forgot"   && <ForgotScreen   onHome={() => setScreen("listings")} onLogin={() => setScreen("login")} />}
       {screen === "edevlet"  && <EDevletScreen  onCancel={() => setScreen("login")} onSuccess={() => setScreen("dashboard")} />}
-      {screen === "dashboard"&& <DashboardScreen onLogout={() => setScreen("login")} />}
+      {screen === "dashboard"&& <DashboardScreen onLogout={() => setScreen("login")} onOcr={() => setScreen("aday-ocr")} onSonuc={() => setScreen("aday-sonuc")} />}
+      {screen === "admin"       && <AdminScreen  onLogout={() => setScreen("login")} />}
+      {screen === "aday-ocr"    && <OcrYukle     onBack={() => setScreen("dashboard")} />}
+      {screen === "aday-sonuc"  && <SonucEkrani  onBack={() => setScreen("dashboard")} />}
 
       {!isPublic && <DemoSwitcher active={screen} onSwitch={setScreen} />}
 

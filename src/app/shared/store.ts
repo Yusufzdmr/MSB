@@ -1,0 +1,679 @@
+// Kurum İçi Tercih ve Yerleştirme Sistemi — paylaşılan durum yönetimi.
+// LocalStorage-backed store: aday panelinden yapılan işlemler admin panelinde,
+// admin panelinden yapılan yerleştirme/duyurular aday panelinde görünür.
+//
+// Backend yok — prod'a alınırken bu modül REST/GraphQL client ile değiştirilir,
+// tüm componentler aynı hook API'sini kullanmaya devam eder.
+
+import { useSyncExternalStore } from "react";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TİPLER
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type Kuvvet = "Kara" | "Deniz" | "Hava" | "Jandarma" | "Sahil Güvenlik" | "MSB Merkez";
+export type Sinif = "Subay" | "Astsubay" | "Uzman Erbaş" | "Sözleşmeli Er" | "Sivil Memur";
+export type EgitimSeviyesi = "Lise" | "Ön Lisans" | "Lisans" | "Yüksek Lisans" | "Doktora";
+export type Cinsiyet = "Erkek" | "Kadın" | "Farketmez";
+export type IlanDurum = "taslak" | "yayin" | "kapali" | "yerlestirildi";
+
+export type Ilan = {
+  id: string;
+  baslik: string;
+  kuvvet: Kuvvet;
+  sinif: Sinif;
+  kontenjan: number;
+  yerlesen: number;
+  basvuranSayisi: number;
+  baslangic: string; // ISO YYYY-MM-DD
+  bitis: string;
+  minPuan: number;      // KPSS/AGS/YDS eşik
+  egitim: EgitimSeviyesi;
+  cinsiyet: Cinsiyet;
+  yasMin: number;
+  yasMax: number;
+  boyMin?: number;      // cm
+  aciklama: string;
+  sehir: string;
+  durum: IlanDurum;
+  olusturmaTarihi: string; // ISO datetime
+  kriterler: string[];  // özel kriterler (örn: ehliyet, yabancı dil)
+};
+
+export type BelgeTipi =
+  | "kimlik" | "diploma" | "transkript" | "sinav_sonuc"
+  | "saglik_raporu" | "askerlik" | "adli_sicil" | "sertifika" | "ehliyet" | "yabanci_dil" | "bonservis" | "diger";
+
+export type BelgeDurum = "beklemede" | "onaylandi" | "reddedildi";
+
+export type Belge = {
+  id: string;
+  adayId: string;
+  tip: BelgeTipi;
+  ad: string;
+  yuklemeTarihi: string;
+  boyutKB: number;
+  durum: BelgeDurum;
+  redGerekce?: string;
+  onaylayan?: string;
+  onayTarihi?: string;
+  // OCR ile çıkarılan alanlar (sınav sonuç belgesi vs.)
+  ocrAlanlar?: Record<string, string | number>;
+  // Data URL veya blob URL (client-side mock)
+  onizleme?: string;
+};
+
+export type Aday = {
+  id: string;                 // TC kimlik (mock)
+  ad: string;
+  soyad: string;
+  eposta: string;
+  telefon: string;
+  dogumTarihi: string;
+  cinsiyet: Cinsiyet;
+  sehir: string;
+  ilce?: string;
+  adres?: string;
+  egitim: EgitimSeviyesi;
+  mezuniyet?: string;         // okul adı
+  bolum?: string;
+  ortalama?: number;          // GPA
+  yabanciDil?: { dil: string; seviye: string; puan?: number }[];
+  ehliyet?: string[];         // ["B", "A2"]
+  sertifikalar?: string[];
+  askerlikDurumu?: "yapildi" | "muaf" | "tecil" | "yapmadi";
+  sinavPuani: number;         // ana yerleştirme puanı (KPSS vb.)
+  sinavAdi?: string;
+  kayitTarihi: string;
+  kvkkOnayi: boolean;
+  aktif: boolean;
+};
+
+export type Basvuru = {
+  id: string;
+  adayId: string;
+  ilanId: string;
+  basvuruTarihi: string;
+  durum: "hazirlaniyor" | "gonderildi" | "onaylandi" | "reddedildi" | "yerlestirildi" | "yerlestirilmedi";
+  puan: number;              // aday'ın bu ilan için toplam puanı
+  redGerekce?: string;
+  yerlestirmeSirasi?: number; // yerleşme durumunda sıra
+};
+
+export type Tercih = {
+  adayId: string;
+  ilanId: string;
+  sira: number;              // 1 = en yüksek tercih
+  guncellenme: string;
+};
+
+export type Duyuru = {
+  id: string;
+  baslik: string;
+  ozet: string;
+  icerik: string;
+  kategori: "genel" | "sinav" | "yerlestirme" | "belge" | "sistem";
+  onemli: boolean;
+  yayinTarihi: string;
+  yayinlayan: string;
+};
+
+export type Mesaj = {
+  id: string;
+  konu: string;
+  icerik: string;
+  gonderen: string;           // "admin" veya adayId
+  alici: string;              // adayId veya "admin" veya "broadcast"
+  tarih: string;
+  okundu: boolean;
+  yanitId?: string;           // thread için
+};
+
+export type Yerlestirme = {
+  id: string;
+  ilanId: string;
+  tarih: string;
+  yontem: "otomatik" | "manuel";
+  yapan: string;
+  yayinlandi: boolean;
+  sonuclar: {
+    adayId: string;
+    tercihSirasi: number;
+    puan: number;
+    durum: "yerlesti" | "yedek" | "yerlesmedi";
+  }[];
+};
+
+export type Rol = "aday" | "admin" | "yonetici";
+
+export type OturumUser = {
+  id: string;
+  ad: string;
+  soyad: string;
+  eposta: string;
+  rol: Rol;
+  tc?: string;
+};
+
+export type State = {
+  ilanlar: Ilan[];
+  adaylar: Aday[];
+  belgeler: Belge[];
+  basvurular: Basvuru[];
+  tercihler: Tercih[];
+  duyurular: Duyuru[];
+  mesajlar: Mesaj[];
+  yerlestirmeler: Yerlestirme[];
+  oturum: OturumUser | null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEED DATA (ilk açılışta yüklenir)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const now = () => new Date().toISOString();
+const today = () => new Date().toISOString().slice(0, 10);
+
+const seedIlanlar: Ilan[] = [
+  {
+    id: "IL-2026-001",
+    baslik: "2026 Yılı Muvazzaf Subay Temini",
+    kuvvet: "Kara",
+    sinif: "Subay",
+    kontenjan: 450, yerlesen: 0, basvuranSayisi: 312,
+    baslangic: "2026-06-01", bitis: "2026-09-15",
+    minPuan: 70, egitim: "Lisans", cinsiyet: "Farketmez",
+    yasMin: 21, yasMax: 27, boyMin: 165,
+    aciklama: "Kara Kuvvetleri Komutanlığı bünyesinde muvazzaf subay temini.",
+    sehir: "Türkiye Geneli", durum: "yayin",
+    olusturmaTarihi: "2026-05-01T09:00:00.000Z",
+    kriterler: ["Sağlık raporu", "Askerlik durumu", "Adli sicil temiz"],
+  },
+  {
+    id: "IL-2026-002",
+    baslik: "Sözleşmeli Er Alımı — 3. Dönem",
+    kuvvet: "Kara",
+    sinif: "Sözleşmeli Er",
+    kontenjan: 1200, yerlesen: 0, basvuranSayisi: 1148,
+    baslangic: "2026-05-15", bitis: "2026-08-20",
+    minPuan: 50, egitim: "Lise", cinsiyet: "Erkek",
+    yasMin: 20, yasMax: 25, boyMin: 165,
+    aciklama: "Kara Kuvvetleri 3. dönem sözleşmeli er alımı.",
+    sehir: "Türkiye Geneli", durum: "yayin",
+    olusturmaTarihi: "2026-04-15T09:00:00.000Z",
+    kriterler: ["Sağlık raporu", "Beden yeterliliği"],
+  },
+  {
+    id: "IL-2026-003",
+    baslik: "Astsubay Meslek Yüksekokulu Temini",
+    kuvvet: "Hava",
+    sinif: "Astsubay",
+    kontenjan: 680, yerlesen: 0, basvuranSayisi: 291,
+    baslangic: "2026-06-10", bitis: "2026-09-30",
+    minPuan: 65, egitim: "Lise", cinsiyet: "Farketmez",
+    yasMin: 18, yasMax: 22, boyMin: 165,
+    aciklama: "Astsubay Meslek YO 2026 giriş sınavı.",
+    sehir: "Türkiye Geneli", durum: "yayin",
+    olusturmaTarihi: "2026-05-10T09:00:00.000Z",
+    kriterler: ["YKS puanı", "Sağlık raporu"],
+  },
+  {
+    id: "IL-2026-004",
+    baslik: "Sivil Memur Alımı — BT & Mühendislik",
+    kuvvet: "MSB Merkez",
+    sinif: "Sivil Memur",
+    kontenjan: 95, yerlesen: 0, basvuranSayisi: 28,
+    baslangic: "2026-06-20", bitis: "2026-09-20",
+    minPuan: 75, egitim: "Lisans", cinsiyet: "Farketmez",
+    yasMin: 22, yasMax: 35,
+    aciklama: "BT, yazılım, siber güvenlik ve mühendislik kadroları.",
+    sehir: "Ankara, İstanbul", durum: "yayin",
+    olusturmaTarihi: "2026-05-20T09:00:00.000Z",
+    kriterler: ["KPSS-P3", "İngilizce YDS/YÖKDİL", "Mesleki sertifika"],
+  },
+];
+
+const seedAdaylar: Aday[] = [
+  {
+    id: "18878273464",
+    ad: "YUSUF", soyad: "ÖZDEMİR",
+    eposta: "yusuf.ozdemir@example.com", telefon: "0555 111 22 33",
+    dogumTarihi: "2003-11-13", cinsiyet: "Erkek", sehir: "Ankara",
+    egitim: "Lisans", mezuniyet: "Gazi Üniversitesi", bolum: "Bilgisayar Mühendisliği",
+    ortalama: 3.42, ehliyet: ["B"],
+    yabanciDil: [{ dil: "İngilizce", seviye: "B2", puan: 78 }],
+    sertifikalar: ["AWS Cloud Practitioner"],
+    askerlikDurumu: "tecil",
+    sinavPuani: 82.4, sinavAdi: "KPSS-P3",
+    kayitTarihi: "2026-07-01T10:15:00.000Z",
+    kvkkOnayi: true, aktif: true,
+  },
+  {
+    id: "24567890123",
+    ad: "AYŞE", soyad: "KAYA",
+    eposta: "ayse.kaya@example.com", telefon: "0555 222 33 44",
+    dogumTarihi: "2001-04-22", cinsiyet: "Kadın", sehir: "İstanbul",
+    egitim: "Lisans", mezuniyet: "İTÜ", bolum: "Elektrik-Elektronik Mühendisliği",
+    ortalama: 3.68,
+    yabanciDil: [{ dil: "İngilizce", seviye: "C1", puan: 88 }],
+    sinavPuani: 88.2, sinavAdi: "KPSS-P3",
+    kayitTarihi: "2026-07-03T11:20:00.000Z",
+    kvkkOnayi: true, aktif: true,
+  },
+  {
+    id: "13456789012",
+    ad: "MEHMET", soyad: "DEMİR",
+    eposta: "m.demir@example.com", telefon: "0555 333 44 55",
+    dogumTarihi: "2002-09-05", cinsiyet: "Erkek", sehir: "İzmir",
+    egitim: "Lise", askerlikDurumu: "yapmadi",
+    sinavPuani: 71.5,
+    kayitTarihi: "2026-07-05T14:00:00.000Z",
+    kvkkOnayi: true, aktif: true,
+  },
+  {
+    id: "35678901234",
+    ad: "ELİF", soyad: "YILMAZ",
+    eposta: "elif.y@example.com", telefon: "0555 444 55 66",
+    dogumTarihi: "2000-12-18", cinsiyet: "Kadın", sehir: "Ankara",
+    egitim: "Yüksek Lisans", mezuniyet: "ODTÜ", bolum: "Yazılım Mühendisliği",
+    ortalama: 3.85,
+    yabanciDil: [{ dil: "İngilizce", seviye: "C1", puan: 92 }],
+    sertifikalar: ["ISO 27001 Lead Auditor"],
+    sinavPuani: 91.7, sinavAdi: "KPSS-P3",
+    kayitTarihi: "2026-07-08T09:30:00.000Z",
+    kvkkOnayi: true, aktif: true,
+  },
+  {
+    id: "46789012345",
+    ad: "AHMET", soyad: "ÇELİK",
+    eposta: "ahmet.celik@example.com", telefon: "0555 555 66 77",
+    dogumTarihi: "1999-06-11", cinsiyet: "Erkek", sehir: "Bursa",
+    egitim: "Ön Lisans", askerlikDurumu: "yapildi",
+    sinavPuani: 63.9,
+    kayitTarihi: "2026-07-10T16:45:00.000Z",
+    kvkkOnayi: true, aktif: true,
+  },
+  {
+    id: "57890123456",
+    ad: "ZEYNEP", soyad: "ARSLAN",
+    eposta: "z.arslan@example.com", telefon: "0555 666 77 88",
+    dogumTarihi: "2003-02-28", cinsiyet: "Kadın", sehir: "Antalya",
+    egitim: "Lisans", mezuniyet: "Akdeniz Üniversitesi", bolum: "İşletme",
+    ortalama: 3.21,
+    sinavPuani: 76.3, sinavAdi: "KPSS-P3",
+    kayitTarihi: "2026-07-12T13:20:00.000Z",
+    kvkkOnayi: true, aktif: true,
+  },
+];
+
+const seedBelgeler: Belge[] = [
+  {
+    id: "BLG-001", adayId: "18878273464", tip: "diploma", ad: "diploma.pdf",
+    yuklemeTarihi: "2026-07-15T10:00:00.000Z", boyutKB: 512, durum: "beklemede",
+  },
+  {
+    id: "BLG-002", adayId: "18878273464", tip: "sinav_sonuc", ad: "kpss_2026.pdf",
+    yuklemeTarihi: "2026-07-15T10:05:00.000Z", boyutKB: 340, durum: "beklemede",
+    ocrAlanlar: { "Puan Türü": "P3", "KPSS Puanı": 82.4, "Sınav Yılı": 2026 },
+  },
+  {
+    id: "BLG-003", adayId: "24567890123", tip: "diploma", ad: "diploma.pdf",
+    yuklemeTarihi: "2026-07-16T09:00:00.000Z", boyutKB: 480, durum: "onaylandi",
+    onaylayan: "admin", onayTarihi: "2026-07-17T14:00:00.000Z",
+  },
+  {
+    id: "BLG-004", adayId: "13456789012", tip: "askerlik", ad: "askerlik_durum.pdf",
+    yuklemeTarihi: "2026-07-18T11:00:00.000Z", boyutKB: 210, durum: "reddedildi",
+    redGerekce: "Belge okunaklı değil, yeniden yükleyiniz.",
+  },
+];
+
+const seedDuyurular: Duyuru[] = [
+  {
+    id: "D-001",
+    baslik: "2026/2 Sözleşmeli Er Yerleştirme Sonuçları Açıklandı",
+    ozet: "2026 yılı 2. dönem sözleşmeli er alımı yerleştirme sonuçları açıklanmıştır.",
+    icerik: "TC kimlik numaranız ile sistem üzerinden sonuçlarınızı sorgulayabilirsiniz. Yerleşen adaylar için evrak teslim süreci başlamıştır.",
+    kategori: "yerlestirme", onemli: true,
+    yayinTarihi: "2026-07-28T09:00:00.000Z", yayinlayan: "PGM",
+  },
+  {
+    id: "D-002",
+    baslik: "Muvazzaf Subay Temini Mülakat Tarihleri Güncellendi",
+    ozet: "Mülakat tarihleri ve sınav yerleri sistemde güncellenmiştir.",
+    icerik: "Adayların 5 gün içinde randevu bilgilerini kontrol etmeleri gerekmektedir.",
+    kategori: "sinav", onemli: false,
+    yayinTarihi: "2026-07-22T10:00:00.000Z", yayinlayan: "PGM",
+  },
+  {
+    id: "D-003",
+    baslik: "OCR ile Belge Yükleme Kılavuzu Güncellendi",
+    ozet: "Belge yükleme sürecinde yaşanan teknik sorunlara yönelik güncellenen kılavuz yayımlanmıştır.",
+    icerik: "Yeni kılavuzu incelemenizi öneririz. Belgelerinizin PDF formatında, 300 DPI çözünürlükte olması OCR başarısını artırır.",
+    kategori: "belge", onemli: false,
+    yayinTarihi: "2026-07-18T15:00:00.000Z", yayinlayan: "Bilgi İşlem",
+  },
+];
+
+const seedBasvurular: Basvuru[] = [
+  { id: "BSV-001", adayId: "18878273464", ilanId: "IL-2026-004", basvuruTarihi: "2026-07-14T10:00:00.000Z", durum: "onaylandi", puan: 82.4 },
+  { id: "BSV-002", adayId: "24567890123", ilanId: "IL-2026-004", basvuruTarihi: "2026-07-15T10:00:00.000Z", durum: "onaylandi", puan: 88.2 },
+  { id: "BSV-003", adayId: "35678901234", ilanId: "IL-2026-004", basvuruTarihi: "2026-07-16T10:00:00.000Z", durum: "onaylandi", puan: 91.7 },
+  { id: "BSV-004", adayId: "13456789012", ilanId: "IL-2026-002", basvuruTarihi: "2026-07-13T10:00:00.000Z", durum: "gonderildi", puan: 71.5 },
+  { id: "BSV-005", adayId: "46789012345", ilanId: "IL-2026-002", basvuruTarihi: "2026-07-14T10:00:00.000Z", durum: "gonderildi", puan: 63.9 },
+  { id: "BSV-006", adayId: "57890123456", ilanId: "IL-2026-004", basvuruTarihi: "2026-07-17T10:00:00.000Z", durum: "gonderildi", puan: 76.3 },
+];
+
+const seedTercihler: Tercih[] = [
+  { adayId: "18878273464", ilanId: "IL-2026-004", sira: 1, guncellenme: "2026-07-14T10:05:00.000Z" },
+  { adayId: "18878273464", ilanId: "IL-2026-001", sira: 2, guncellenme: "2026-07-14T10:05:00.000Z" },
+  { adayId: "24567890123", ilanId: "IL-2026-004", sira: 1, guncellenme: "2026-07-15T10:05:00.000Z" },
+  { adayId: "35678901234", ilanId: "IL-2026-004", sira: 1, guncellenme: "2026-07-16T10:05:00.000Z" },
+];
+
+const seedMesajlar: Mesaj[] = [
+  { id: "M-001", konu: "Belge Onayı", icerik: "Diploma belgeniz onaylanmıştır. Kalan belgelerinizi de tamamlamanız gerekmektedir.",
+    gonderen: "admin", alici: "24567890123", tarih: "2026-07-17T14:05:00.000Z", okundu: false },
+  { id: "M-002", konu: "Hoş Geldiniz", icerik: "Personel Temin Sistemine hoş geldiniz. Başvuru sürecinizi tamamlamak için Bilgilerim sekmesindeki formu doldurunuz.",
+    gonderen: "admin", alici: "18878273464", tarih: "2026-07-01T10:30:00.000Z", okundu: true },
+];
+
+const seed: State = {
+  ilanlar: seedIlanlar,
+  adaylar: seedAdaylar,
+  belgeler: seedBelgeler,
+  basvurular: seedBasvurular,
+  tercihler: seedTercihler,
+  duyurular: seedDuyurular,
+  mesajlar: seedMesajlar,
+  yerlestirmeler: [],
+  oturum: null,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STORE (custom subscribable, useSyncExternalStore uyumlu)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const LS_KEY = "msb.ptds.v1";
+
+function loadInitial(): State {
+  if (typeof window === "undefined") return seed;
+  try {
+    const raw = window.localStorage.getItem(LS_KEY);
+    if (!raw) return seed;
+    const parsed = JSON.parse(raw) as Partial<State>;
+    return {
+      ilanlar:        parsed.ilanlar        ?? seed.ilanlar,
+      adaylar:        parsed.adaylar        ?? seed.adaylar,
+      belgeler:       parsed.belgeler       ?? seed.belgeler,
+      basvurular:     parsed.basvurular     ?? seed.basvurular,
+      tercihler:      parsed.tercihler      ?? seed.tercihler,
+      duyurular:      parsed.duyurular      ?? seed.duyurular,
+      mesajlar:       parsed.mesajlar       ?? seed.mesajlar,
+      yerlestirmeler: parsed.yerlestirmeler ?? seed.yerlestirmeler,
+      oturum:         parsed.oturum         ?? null,
+    };
+  } catch {
+    return seed;
+  }
+}
+
+let state: State = loadInitial();
+const listeners = new Set<() => void>();
+
+function persist() {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* quota veya SSR */ }
+}
+
+function notify() {
+  persist();
+  listeners.forEach(l => l());
+}
+
+function subscribe(l: () => void) {
+  listeners.add(l);
+  return () => { listeners.delete(l); };
+}
+
+function getSnapshot(): State {
+  return state;
+}
+
+function set(mutator: (draft: State) => State | void) {
+  const next = mutator({ ...state });
+  state = (next as State) || state;
+  notify();
+}
+
+// React hook — selector opsiyonel; default: tüm state.
+export function useStore(): State;
+export function useStore<T>(selector: (s: State) => T): T;
+export function useStore<T>(selector?: (s: State) => T) {
+  const sel = selector ?? ((s: State) => s as unknown as T);
+  return useSyncExternalStore(subscribe, () => sel(state), () => sel(state));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EYLEMLER (actions)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const genId = (prefix: string) =>
+  `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
+
+export const actions = {
+  // ─ Oturum
+  girisAday: (tc: string) => {
+    const aday = state.adaylar.find(a => a.id === tc);
+    if (!aday) return { ok: false, error: "Aday bulunamadı" as const };
+    set(s => { s.oturum = { id: aday.id, ad: aday.ad, soyad: aday.soyad, eposta: aday.eposta, rol: "aday", tc: aday.id }; return s; });
+    return { ok: true as const };
+  },
+  girisAdmin: (eposta: string) => {
+    set(s => { s.oturum = { id: "admin", ad: "Yönetici", soyad: "Kullanıcısı", eposta, rol: "admin" }; return s; });
+    return { ok: true as const };
+  },
+  cikis: () => set(s => { s.oturum = null; return s; }),
+
+  // ─ İlanlar
+  ilanEkle: (payload: Omit<Ilan, "id" | "yerlesen" | "basvuranSayisi" | "olusturmaTarihi" | "durum"> & Partial<Pick<Ilan, "durum">>) => {
+    const yeni: Ilan = {
+      ...payload,
+      id: genId("IL"),
+      yerlesen: 0,
+      basvuranSayisi: 0,
+      durum: payload.durum ?? "taslak",
+      olusturmaTarihi: now(),
+    };
+    set(s => { s.ilanlar = [yeni, ...s.ilanlar]; return s; });
+    return yeni;
+  },
+  ilanGuncelle: (id: string, patch: Partial<Ilan>) =>
+    set(s => { s.ilanlar = s.ilanlar.map(i => i.id === id ? { ...i, ...patch } : i); return s; }),
+  ilanSil: (id: string) =>
+    set(s => { s.ilanlar = s.ilanlar.filter(i => i.id !== id); return s; }),
+
+  // ─ Adaylar
+  adayEkle: (payload: Omit<Aday, "kayitTarihi" | "aktif">) =>
+    set(s => { s.adaylar = [{ ...payload, kayitTarihi: now(), aktif: true }, ...s.adaylar]; return s; }),
+  adayGuncelle: (id: string, patch: Partial<Aday>) =>
+    set(s => { s.adaylar = s.adaylar.map(a => a.id === id ? { ...a, ...patch } : a); return s; }),
+
+  // ─ Belgeler
+  belgeYukle: (payload: Omit<Belge, "id" | "yuklemeTarihi" | "durum">) => {
+    const yeni: Belge = { ...payload, id: genId("BLG"), yuklemeTarihi: now(), durum: "beklemede" };
+    set(s => { s.belgeler = [yeni, ...s.belgeler]; return s; });
+    return yeni;
+  },
+  belgeOnayla: (id: string, onaylayan: string) =>
+    set(s => { s.belgeler = s.belgeler.map(b => b.id === id ? { ...b, durum: "onaylandi", onaylayan, onayTarihi: now(), redGerekce: undefined } : b); return s; }),
+  belgeReddet: (id: string, onaylayan: string, redGerekce: string) =>
+    set(s => { s.belgeler = s.belgeler.map(b => b.id === id ? { ...b, durum: "reddedildi", onaylayan, onayTarihi: now(), redGerekce } : b); return s; }),
+
+  // ─ Başvurular
+  basvuruYap: (adayId: string, ilanId: string, puan: number) => {
+    if (state.basvurular.some(b => b.adayId === adayId && b.ilanId === ilanId)) return null;
+    const yeni: Basvuru = { id: genId("BSV"), adayId, ilanId, basvuruTarihi: now(), durum: "gonderildi", puan };
+    set(s => {
+      s.basvurular = [yeni, ...s.basvurular];
+      s.ilanlar = s.ilanlar.map(i => i.id === ilanId ? { ...i, basvuranSayisi: i.basvuranSayisi + 1 } : i);
+      return s;
+    });
+    return yeni;
+  },
+  basvuruDurumGuncelle: (id: string, durum: Basvuru["durum"], redGerekce?: string) =>
+    set(s => { s.basvurular = s.basvurular.map(b => b.id === id ? { ...b, durum, redGerekce } : b); return s; }),
+
+  // ─ Tercihler
+  tercihKaydet: (adayId: string, siralar: { ilanId: string; sira: number }[]) =>
+    set(s => {
+      s.tercihler = [
+        ...s.tercihler.filter(t => t.adayId !== adayId),
+        ...siralar.map(x => ({ adayId, ilanId: x.ilanId, sira: x.sira, guncellenme: now() })),
+      ];
+      return s;
+    }),
+
+  // ─ Duyurular
+  duyuruEkle: (payload: Omit<Duyuru, "id" | "yayinTarihi">) => {
+    const yeni: Duyuru = { ...payload, id: genId("D"), yayinTarihi: now() };
+    set(s => { s.duyurular = [yeni, ...s.duyurular]; return s; });
+    return yeni;
+  },
+  duyuruSil: (id: string) =>
+    set(s => { s.duyurular = s.duyurular.filter(d => d.id !== id); return s; }),
+
+  // ─ Mesajlar
+  mesajGonder: (payload: Omit<Mesaj, "id" | "tarih" | "okundu">) => {
+    const yeni: Mesaj = { ...payload, id: genId("M"), tarih: now(), okundu: false };
+    set(s => { s.mesajlar = [yeni, ...s.mesajlar]; return s; });
+    return yeni;
+  },
+  mesajOkundu: (id: string) =>
+    set(s => { s.mesajlar = s.mesajlar.map(m => m.id === id ? { ...m, okundu: true } : m); return s; }),
+
+  // ─ Yerleştirme motoru
+  // Algoritma: her ilana başvuran adaylar puana göre büyükten küçüğe sıralanır.
+  // Tercih sırası eşitliğinde daha yüksek puanlı kazanır. Her aday sadece bir yere yerleşir.
+  yerlestirmeCalistir: (ilanId: string, yontem: "otomatik" | "manuel", yapan: string) => {
+    const ilan = state.ilanlar.find(i => i.id === ilanId);
+    if (!ilan) return null;
+
+    // İlan'a başvuran + onaylı adaylar
+    const basvurular = state.basvurular
+      .filter(b => b.ilanId === ilanId && (b.durum === "onaylandi" || b.durum === "gonderildi"))
+      .filter(b => b.puan >= ilan.minPuan);
+
+    // Zaten başka bir ilana yerleşmiş adayları ele
+    const zatenYerlesenler = new Set(
+      state.yerlestirmeler
+        .filter(y => y.yayinlandi)
+        .flatMap(y => y.sonuclar.filter(r => r.durum === "yerlesti").map(r => r.adayId))
+    );
+
+    // Adayın bu ilan için tercih sırası (yoksa çok büyük değer)
+    const tercihSirasi = (adayId: string) => {
+      const t = state.tercihler.find(x => x.adayId === adayId && x.ilanId === ilanId);
+      return t?.sira ?? 999;
+    };
+
+    const siralanan = basvurular
+      .filter(b => !zatenYerlesenler.has(b.adayId))
+      .sort((a, b) => {
+        const ta = tercihSirasi(a.adayId);
+        const tb = tercihSirasi(b.adayId);
+        if (ta !== tb) return ta - tb;
+        return b.puan - a.puan;
+      });
+
+    const yerlesenler = siralanan.slice(0, ilan.kontenjan);
+    const yedekSayisi = Math.min(Math.ceil(ilan.kontenjan * 0.2), siralanan.length - yerlesenler.length);
+    const yedekler = siralanan.slice(ilan.kontenjan, ilan.kontenjan + yedekSayisi);
+    const yerlesmeyenler = siralanan.slice(ilan.kontenjan + yedekSayisi);
+
+    const yerlestirme: Yerlestirme = {
+      id: genId("YRL"), ilanId, tarih: now(), yontem, yapan, yayinlandi: false,
+      sonuclar: [
+        ...yerlesenler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: b.puan, durum: "yerlesti" as const })),
+        ...yedekler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: b.puan, durum: "yedek" as const })),
+        ...yerlesmeyenler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: b.puan, durum: "yerlesmedi" as const })),
+      ],
+    };
+
+    // Aynı ilan için önceki yayınlanmamış yerleştirmeyi değiştir
+    set(s => {
+      s.yerlestirmeler = [
+        yerlestirme,
+        ...s.yerlestirmeler.filter(y => !(y.ilanId === ilanId && !y.yayinlandi)),
+      ];
+      return s;
+    });
+    return yerlestirme;
+  },
+  yerlestirmeManuelDegistir: (yerlestirmeId: string, adayId: string, yeniDurum: "yerlesti" | "yedek" | "yerlesmedi") =>
+    set(s => {
+      s.yerlestirmeler = s.yerlestirmeler.map(y =>
+        y.id !== yerlestirmeId ? y :
+          { ...y, sonuclar: y.sonuclar.map(r => r.adayId === adayId ? { ...r, durum: yeniDurum } : r) }
+      );
+      return s;
+    }),
+  yerlestirmeYayinla: (yerlestirmeId: string) =>
+    set(s => {
+      const y = s.yerlestirmeler.find(z => z.id === yerlestirmeId);
+      if (!y) return s;
+      s.yerlestirmeler = s.yerlestirmeler.map(z => z.id === yerlestirmeId ? { ...z, yayinlandi: true } : z);
+      // Başvuru durumlarını güncelle
+      const yerlesenIds = new Set(y.sonuclar.filter(r => r.durum === "yerlesti").map(r => r.adayId));
+      s.basvurular = s.basvurular.map(b => {
+        if (b.ilanId !== y.ilanId) return b;
+        return { ...b, durum: yerlesenIds.has(b.adayId) ? "yerlestirildi" : "yerlestirilmedi" };
+      });
+      // İlan sayaçları
+      s.ilanlar = s.ilanlar.map(i => i.id === y.ilanId ? { ...i, yerlesen: yerlesenIds.size, durum: "yerlestirildi" } : i);
+      // Otomatik duyuru + kişisel mesajlar
+      s.duyurular = [{
+        id: genId("D"),
+        baslik: `${s.ilanlar.find(i => i.id === y.ilanId)?.baslik ?? "İlan"} — Yerleştirme Sonuçları`,
+        ozet: `Toplam ${yerlesenIds.size} aday yerleştirilmiştir. Sonuçlarınızı panelinizden sorgulayabilirsiniz.`,
+        icerik: "Yerleşen adaylar için evrak teslim süreci başlamıştır. Yedek adaylar boş kalan kontenjanlara sırayla çağrılacaktır.",
+        kategori: "yerlestirme", onemli: true,
+        yayinTarihi: now(), yayinlayan: "PGM",
+      }, ...s.duyurular];
+      const yeniMesajlar: Mesaj[] = y.sonuclar.map(r => ({
+        id: genId("M"),
+        konu: "Yerleştirme Sonucu",
+        icerik: r.durum === "yerlesti"
+          ? "Tebrikler, ilgili ilan için yerleştirilmiş bulunmaktasınız. Sonuç belgenizi panelinizden indirebilirsiniz."
+          : r.durum === "yedek"
+          ? "Yerleştirme sonucunda yedek listesine alındınız. Boş kalan kontenjanlar için çağrılabilirsiniz."
+          : "Yerleştirme sonucunda kadro dahilinde değerlendirilememişsinizdir.",
+        gonderen: "admin", alici: r.adayId, tarih: now(), okundu: false,
+      }));
+      s.mesajlar = [...yeniMesajlar, ...s.mesajlar];
+      return s;
+    }),
+
+  // ─ Reset (test/demo için)
+  resetAll: () => { state = seed; notify(); },
+};
+
+// Selector yardımcıları
+export const select = {
+  bekleyenBelgeSayisi: (s: State) => s.belgeler.filter(b => b.durum === "beklemede").length,
+  aktifIlanSayisi: (s: State) => s.ilanlar.filter(i => i.durum === "yayin").length,
+  toplamAday: (s: State) => s.adaylar.length,
+  toplamYerlesen: (s: State) => s.ilanlar.reduce((a, i) => a + i.yerlesen, 0),
+  adayBelgeleri: (s: State, adayId: string) => s.belgeler.filter(b => b.adayId === adayId),
+  adayBasvurulari: (s: State, adayId: string) => s.basvurular.filter(b => b.adayId === adayId),
+  adayMesajlari: (s: State, adayId: string) => s.mesajlar.filter(m => m.alici === adayId || m.gonderen === adayId),
+  adayYerlestirmesi: (s: State, adayId: string) => {
+    for (const y of s.yerlestirmeler.filter(x => x.yayinlandi)) {
+      const r = y.sonuclar.find(x => x.adayId === adayId);
+      if (r) return { yerlestirme: y, sonuc: r };
+    }
+    return null;
+  },
+};
+
+export { today, now };
