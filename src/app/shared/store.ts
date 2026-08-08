@@ -757,23 +757,32 @@ const seed: State = {
 
 const LS_KEY = "msb.ptds.v1";
 
+// Seed'de olup localStorage'da olmayan kayıtları merge et (ID bazlı)
+function mergeSeedRecords<T extends { id: string }>(stored: T[] | undefined, seedArr: T[]): T[] {
+  const arr = stored ?? [];
+  const mevcutIds = new Set(arr.map(x => x.id));
+  const eklenecek = seedArr.filter(x => !mevcutIds.has(x.id));
+  return [...eklenecek, ...arr];
+}
+
 function loadInitial(): State {
   if (typeof window === "undefined") return seed;
   try {
     const raw = window.localStorage.getItem(LS_KEY);
     if (!raw) return seed;
     const parsed = JSON.parse(raw) as Partial<State>;
+    // ID bazlı seed merge — yeni eklenen seed kayıtları (D-004 vb.) her zaman yüklenir
     return {
-      ilanlar:        parsed.ilanlar        ?? seed.ilanlar,
+      ilanlar:        mergeSeedRecords(parsed.ilanlar,   seed.ilanlar),
       adaylar:        parsed.adaylar        ?? seed.adaylar,
-      belgeler:       parsed.belgeler       ?? seed.belgeler,
-      basvurular:     parsed.basvurular     ?? seed.basvurular,
+      belgeler:       mergeSeedRecords(parsed.belgeler,  seed.belgeler),
+      basvurular:     mergeSeedRecords(parsed.basvurular,seed.basvurular),
       tercihler:      parsed.tercihler      ?? seed.tercihler,
-      duyurular:      parsed.duyurular      ?? seed.duyurular,
-      mesajlar:       parsed.mesajlar       ?? seed.mesajlar,
+      duyurular:      mergeSeedRecords(parsed.duyurular, seed.duyurular),
+      mesajlar:       mergeSeedRecords(parsed.mesajlar,  seed.mesajlar),
       yerlestirmeler: parsed.yerlestirmeler ?? seed.yerlestirmeler,
       profiller:      parsed.profiller      ?? seed.profiller,
-      cagrilar:       parsed.cagrilar       ?? seed.cagrilar,
+      cagrilar:       mergeSeedRecords(parsed.cagrilar,  seed.cagrilar),
       oturum:         parsed.oturum         ?? null,
     };
   } catch {
@@ -1081,9 +1090,22 @@ export const actions = {
     const tabanIcin = (adayId: string) =>
       sehitGaziMi(adayId) ? Math.max(0, ilan.minPuan - (ilan.sehitGaziTabanIndirimi ?? 0)) : ilan.minPuan;
 
+    // Ön eleme: min sıralama şartı — adayın sınavdaki sıralaması ilk N'de mi?
+    const siralamaEler = (adayId: string): boolean => {
+      const min = ilan.kriterOnEleme?.minSiralama;
+      if (!min) return true;
+      const p = state.profiller.find(x => x.adayId === adayId);
+      if (!p || p.sinavlar.length === 0) return true; // profil yoksa geçir
+      // En iyi (en küçük) sıralama içindeyse geçer
+      const enIyi = Math.min(...p.sinavlar.filter(s => s.siralama).map(s => s.siralama!));
+      return enIyi <= min;
+    };
+
     const basvurular = state.basvurular
       .filter(b => b.ilanId === ilanId && (b.durum === "onaylandi" || b.durum === "gonderildi" || b.durum === "belge_onay_bekliyor"))
-      .filter(b => b.puan >= tabanIcin(b.adayId));
+      .filter(b => b.odemeDurumu !== "iptal")   // Ödeme süresi aşan hariç
+      .filter(b => b.puan >= tabanIcin(b.adayId))
+      .filter(b => siralamaEler(b.adayId));      // Ön eleme sıralama şartı
 
     const zatenYerlesenler = new Set(
       state.yerlestirmeler
