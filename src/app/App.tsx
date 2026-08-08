@@ -1413,13 +1413,16 @@ function Screen3({ onDuyuru }: { onDuyuru?: (id: string) => void }) {
 
   const cats = ["Tümü", "Güncel Duyurular", "Güncel Teminler"];
 
-  const catMap: Record<string, typeof ANNOUNCEMENTS[0]["cat"][]> = {
-    "Güncel Duyurular": ["exam", "placement", "general", "document"],
-    "Güncel Teminler":  ["general", "document"],
+  // "Güncel Teminler" = başvurusu açık ilan/temin faaliyetleri (başlıkta TEMİN/ALIM/BAŞVURU)
+  // "Güncel Duyurular" = sonuç/yerleştirme/bilgilendirme (diğer her şey)
+  const teminMi = (a: typeof ANNOUNCEMENTS[0]) => {
+    const t = a.title.toUpperCase();
+    return /TEMİN|ALIM|BAŞVURU/.test(t);
   };
-
   const filtered = ANNOUNCEMENTS.filter(a => {
-    const mc = cat === "Tümü" || catMap[cat]?.includes(a.cat);
+    const mc = cat === "Tümü"
+      || (cat === "Güncel Teminler" && teminMi(a))
+      || (cat === "Güncel Duyurular" && !teminMi(a));
     const mq = a.title.toLowerCase().includes(query.toLowerCase()) || a.summary.toLowerCase().includes(query.toLowerCase());
     return mc && mq;
   });
