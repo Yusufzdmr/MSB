@@ -107,6 +107,13 @@ export type Tercih = {
   guncellenme: string;
 };
 
+export type DuyuruEk = { ad: string; boyutKB: number; url?: string };
+export type DuyuruSonucKayit = {
+  tc: string; ad: string; soyad: string;
+  program?: string; statu: "Asil" | "Yedek" | "Yerleşemedi" | "Red";
+  sira?: number; puan?: number; sonucKodu?: string;
+  gerekce?: string; sonucTarihi: string;
+};
 export type Duyuru = {
   id: string;
   baslik: string;
@@ -116,6 +123,10 @@ export type Duyuru = {
   onemli: boolean;
   yayinTarihi: string;
   yayinlayan: string;
+  ilanId?: string;
+  ekler?: DuyuruEk[];
+  sonucSorgulamaAktif?: boolean;
+  sonuclar?: DuyuruSonucKayit[];
 };
 
 export type Mesaj = {
@@ -146,6 +157,171 @@ export type Yerlestirme = {
 
 export type Rol = "aday" | "admin" | "yonetici";
 
+// ─── Başvuru Sihirbazı: adım adım aday profil verileri ─────────────────────────
+
+export type Uyruk = "T.C." | "KKTC" | "Diğer";
+export type MedeniHal = "Bekar" | "Evli" | "Boşanmış" | "Dul";
+export type YakinlikDerecesi = "Eş" | "Çocuk" | "Kardeş" | "Anne" | "Baba";
+export type EgitimDurumu = "Mezun" | "Öğrenci";
+export type NotSistemi = "4 üzerinden" | "5 üzerinden" | "10 üzerinden" | "100 üzerinden";
+export type OgretimTipi = "Örgün Öğretim" | "Yaygın Öğretim" | "Açık Öğretim" | "Dışardan Öğretim";
+export type EgitimYeri = "Türkiye" | "KKTC";
+export type EgitimSeviyeKod =
+  | "esdeger_yo" | "esdeger_uni" | "esdeger_yl" | "esdeger_dr"
+  | "denk_yo" | "denk_uni" | "denk_yl" | "denk_dr"
+  | "denk_lise";
+
+export type SinavTuru =
+  | "YDS" | "YKS" | "AGS" | "TUS" | "DUS" | "YDT" | "MSÜ" | "DGS"
+  | "KPSS Lisans" | "KPSS Ön Lisans" | "ALES" | "TR-YÖS";
+
+export type KimlikBilgi = {
+  uyruk: Uyruk;
+  kimlikNo: string;
+  ad: string;
+  soyad: string;
+  dogumTarihi: string;
+  medeniHal: MedeniHal | "";
+  cinsiyet: Cinsiyet;
+  vesikalikFoto?: string;   // dataURL veya boş; biyometrik fotoğraf
+};
+
+export type SehitGaziBilgi = {
+  varMi: boolean;
+  yakinlikDerecesi?: YakinlikDerecesi;
+  belgeAdi?: string;
+  belgeBoyutKB?: number;
+  belgeYuklemeTarihi?: string;
+  ocrTcKimlik?: string;
+  ocrAdSoyad?: string;
+  ocrYakinlik?: string;
+  ocrEslesmeUyari?: boolean;
+  kvkkOnay?: boolean;
+  sorumlulukOnay?: boolean;
+};
+
+export type EgitimKaydi = {
+  id: string;
+  durum: EgitimDurumu;
+  seviye: EgitimSeviyeKod;
+  seviyeAdi: string;
+  // Yükseköğretim
+  universite?: string;
+  fakulte?: string;
+  bolum?: string;
+  ogretimTipi?: OgretimTipi;
+  // Ortaöğretim
+  egitimYeri?: EgitimYeri;
+  il?: string;
+  ilce?: string;
+  okulAdi?: string;
+  // Ortak
+  diplomaNo?: string;
+  baslangicTarihi?: string;
+  mezuniyetTarihi?: string;
+  notSistemi?: NotSistemi;
+  mezuniyetNotu?: string;
+  belgeAdi?: string;
+  // Eşdeğer ise
+  egitimUlkesi?: string;
+  egitimDili?: string;
+};
+
+export type SinavKaydi = {
+  id: string;
+  sinav: SinavTuru;
+  sinavYili: number;
+  sonucKodu: string;
+  belgeAdi: string;
+  // Sınav türüne göre okunan / seçilen bilgiler
+  kategori?: string;      // KPSS P1/P2/P3 vb.
+  altKategori?: string;   // P10, P48 vb.
+  alan?: string;          // SAY, SÖZ, EA
+  dil?: string;           // YDT için
+  puan?: number;
+  yuzdelikDilim?: number;
+  siralama?: number;
+  seviye?: string;        // YDS: A/B/C/D/E
+  onayDurumu: "beklemede" | "onaylandi" | "reddedildi";
+  onayNotu?: string;
+};
+
+export type AdresBilgi = {
+  ulke: string;      // Türkiye / KKTC / Diğer
+  il: string;
+  ilce: string;
+  koyKasaba?: string;
+  mahalle?: string;
+  cadde?: string;
+  sokak?: string;
+  binaNo: string;
+  daireNo: string;
+};
+
+export type IletisimBilgi = {
+  gsm: string;
+  yakinTelefon1: string;
+  yakinTelefon2?: string;
+  eposta: string;
+};
+
+export type DigerBelgeler = {
+  bonservisAdi?: string;
+  adliSicilAdi?: string;
+};
+
+export type BasvuruProfili = {
+  adayId: string;
+  kimlik: KimlikBilgi;
+  sehitGazi: SehitGaziBilgi;
+  egitimler: EgitimKaydi[];
+  sinavlar: SinavKaydi[];
+  adres?: AdresBilgi;
+  iletisim?: IletisimBilgi;
+  digerBelgeler?: DigerBelgeler;
+  sorumlulukBeyani: boolean;
+  kvkkOnayi: boolean;
+  guncelleme: string;
+};
+
+// ─── Çağrı (Destek Talebi) ─────────────────────────────────────────────────────
+
+export type CagriKategori =
+  | "Başvuru ve Tercih İşlemleri"
+  | "Sınav Sonuç ve Puan İşlemleri"
+  | "Belge ve Evraklar Hakkında"
+  | "Teknik ve Hesap Sorunları"
+  | "Sonuç ve Çağrı Durumu"
+  | "Diğer / Genel Bilgi Talepleri"
+  | "Öneri"
+  | "Görüş";
+
+export type CagriDurum = "acik" | "islemde" | "yanitlandi" | "kapali";
+
+export type CagriMesaj = {
+  gonderen: "aday" | "admin";
+  metin: string;
+  tarih: string;
+};
+
+export type Cagri = {
+  id: string;
+  adayId: string;
+  ad: string;
+  soyad: string;
+  eposta: string;
+  telefon: string;
+  kategori: CagriKategori;
+  altKategori?: string;
+  alimId?: string;      // ilan referansı
+  aciklama: string;
+  gorselAdi?: string;
+  olusturma: string;
+  durum: CagriDurum;
+  oncelik: "Düşük" | "Normal" | "Yüksek";
+  mesajlar: CagriMesaj[];
+};
+
 export type OturumUser = {
   id: string;
   ad: string;
@@ -164,6 +340,8 @@ export type State = {
   duyurular: Duyuru[];
   mesajlar: Mesaj[];
   yerlestirmeler: Yerlestirme[];
+  profiller: BasvuruProfili[];
+  cagrilar: Cagri[];
   oturum: OturumUser | null;
 };
 
@@ -336,6 +514,19 @@ const seedDuyurular: Duyuru[] = [
     icerik: "TC kimlik numaranız ile sistem üzerinden sonuçlarınızı sorgulayabilirsiniz. Yerleşen adaylar için evrak teslim süreci başlamıştır.",
     kategori: "yerlestirme", onemli: true,
     yayinTarihi: "2026-07-28T09:00:00.000Z", yayinlayan: "PGM",
+    ilanId: "IL-2026-002",
+    sonucSorgulamaAktif: true,
+    ekler: [
+      { ad: "Görevde Yükselme Taban Puanı Tablosu.pdf", boyutKB: 245 },
+      { ad: "Ünvan Değişikliği Taban Puanı Tablosu.pdf", boyutKB: 198 },
+      { ad: "Sözleşmeli Er 2026-2 Yerleştirme Sonuç Listesi.xlsx", boyutKB: 512 },
+    ],
+    sonuclar: [
+      { tc: "18878273464", ad: "YUSUF", soyad: "ÖZDEMİR", program: "Kara Kuvvetleri Sözleşmeli Er", statu: "Asil", sira: 42, puan: 82.4, sonucKodu: "SR-2026-042", sonucTarihi: "2026-07-28T09:00:00.000Z" },
+      { tc: "24567890123", ad: "AYŞE", soyad: "KAYA", program: "Kara Kuvvetleri Sözleşmeli Er", statu: "Asil", sira: 5, puan: 88.2, sonucKodu: "SR-2026-005", sonucTarihi: "2026-07-28T09:00:00.000Z" },
+      { tc: "13456789012", ad: "MEHMET", soyad: "DEMİR", program: "Kara Kuvvetleri Sözleşmeli Er", statu: "Yedek", sira: 128, puan: 71.5, sonucKodu: "SR-2026-Y128", sonucTarihi: "2026-07-28T09:00:00.000Z" },
+      { tc: "46789012345", ad: "AHMET", soyad: "ÇELİK", program: "-", statu: "Yerleşemedi", puan: 320.03, gerekce: "Süreçte başarısız olduğunuzdan adaylığınız sonlandırılmıştır. (Gerekçe: Zorunlu profil adımları eksik: Kimlik Bilgileri, Biyometrik Fotoğraf, Eğitim Bilgileri, Sınav Bilgileri, Adres Bilgileri)", sonucTarihi: "2026-08-07T09:00:00.000Z" },
+    ],
   },
   {
     id: "D-002",
@@ -378,6 +569,62 @@ const seedMesajlar: Mesaj[] = [
     gonderen: "admin", alici: "18878273464", tarih: "2026-07-01T10:30:00.000Z", okundu: true },
 ];
 
+const seedProfiller: BasvuruProfili[] = [
+  {
+    adayId: "18878273464",
+    kimlik: {
+      uyruk: "T.C.", kimlikNo: "18878273464",
+      ad: "YUSUF", soyad: "ÖZDEMİR",
+      dogumTarihi: "2003-11-13", medeniHal: "Bekar", cinsiyet: "Erkek",
+    },
+    sehitGazi: { varMi: false },
+    egitimler: [
+      {
+        id: "EGT-001", durum: "Öğrenci", seviye: "denk_uni", seviyeAdi: "Denk Ülke Üniversite",
+        universite: "Gazi Üniversitesi", fakulte: "Mühendislik Fakültesi",
+        bolum: "Bilgisayar Mühendisliği", ogretimTipi: "Örgün Öğretim",
+        baslangicTarihi: "2021-09-15", notSistemi: "4 üzerinden", mezuniyetNotu: "3.42",
+      },
+      {
+        id: "EGT-002", durum: "Mezun", seviye: "denk_lise", seviyeAdi: "Denk Ülke Lise/Ortaöğretim",
+        egitimYeri: "Türkiye", il: "Ankara", ilce: "Çankaya",
+        okulAdi: "Ankara Atatürk Anadolu Lisesi",
+        mezuniyetTarihi: "2021-06-15", notSistemi: "100 üzerinden", mezuniyetNotu: "87.5",
+      },
+    ],
+    sinavlar: [
+      {
+        id: "SNV-001", sinav: "KPSS Lisans", sinavYili: 2026, sonucKodu: "KPSS-26-004512",
+        belgeAdi: "kpss_2026.pdf", kategori: "KPSS P3", puan: 82.4, siralama: 15420,
+        onayDurumu: "beklemede",
+      },
+    ],
+    adres: { ulke: "Türkiye", il: "Ankara", ilce: "Çankaya", mahalle: "Kavaklıdere",
+             cadde: "Atatürk Bulvarı", binaNo: "125", daireNo: "8" },
+    iletisim: { gsm: "0555 111 22 33", yakinTelefon1: "0312 444 55 66", eposta: "yusuf.ozdemir@example.com" },
+    sorumlulukBeyani: true, kvkkOnayi: true,
+    guncelleme: "2026-07-14T09:00:00.000Z",
+  },
+];
+
+const seedCagrilar: Cagri[] = [
+  {
+    id: "CAG-2026-1042", adayId: "18878273464",
+    ad: "YUSUF", soyad: "ÖZDEMİR",
+    eposta: "yusuf.ozdemir@example.com", telefon: "0555 111 22 33",
+    kategori: "Sınav Sonuç ve Puan İşlemleri",
+    altKategori: "Sınav sonuç belgem OCR tarafından yanlış okundu / puanım hatalı yansıdı.",
+    alimId: "IL-2026-004",
+    aciklama: "KPSS-P3 puanım sistemde 82.4 olarak görünüyor ancak belgemde 84.7 yazıyor. Kontrol edilmesini rica ederim.",
+    olusturma: "2026-07-20T10:15:00.000Z",
+    durum: "yanitlandi", oncelik: "Normal",
+    mesajlar: [
+      { gonderen: "aday", metin: "KPSS-P3 puanım sistemde 82.4 olarak görünüyor ancak belgemde 84.7 yazıyor.", tarih: "2026-07-20T10:15:00.000Z" },
+      { gonderen: "admin", metin: "Talebiniz incelenmiştir. Belgenizde OCR düzeltmesi yapılmış olup puanınız 84.7 olarak güncellenmiştir.", tarih: "2026-07-22T14:20:00.000Z" },
+    ],
+  },
+];
+
 const seed: State = {
   ilanlar: seedIlanlar,
   adaylar: seedAdaylar,
@@ -387,6 +634,8 @@ const seed: State = {
   duyurular: seedDuyurular,
   mesajlar: seedMesajlar,
   yerlestirmeler: [],
+  profiller: seedProfiller,
+  cagrilar: seedCagrilar,
   oturum: null,
 };
 
@@ -411,6 +660,8 @@ function loadInitial(): State {
       duyurular:      parsed.duyurular      ?? seed.duyurular,
       mesajlar:       parsed.mesajlar       ?? seed.mesajlar,
       yerlestirmeler: parsed.yerlestirmeler ?? seed.yerlestirmeler,
+      profiller:      parsed.profiller      ?? seed.profiller,
+      cagrilar:       parsed.cagrilar       ?? seed.cagrilar,
       oturum:         parsed.oturum         ?? null,
     };
   } catch {
@@ -418,7 +669,19 @@ function loadInitial(): State {
   }
 }
 
-let state: State = loadInitial();
+function autoExpireIlanlar(s: State): State {
+  const bugun = new Date().toISOString().slice(0, 10);
+  const dolan = s.ilanlar.filter(i => i.durum === "yayin" && i.bitis < bugun);
+  if (dolan.length === 0) return s;
+  return {
+    ...s,
+    ilanlar: s.ilanlar.map(i =>
+      i.durum === "yayin" && i.bitis < bugun ? { ...i, durum: "kapali" } : i
+    ),
+  };
+}
+
+let state: State = autoExpireIlanlar(loadInitial());
 const listeners = new Set<() => void>();
 
 function persist() {
@@ -540,6 +803,14 @@ export const actions = {
     set(s => { s.duyurular = [yeni, ...s.duyurular]; return s; });
     return yeni;
   },
+  duyuruGuncelle: (id: string, patch: Partial<Duyuru>) =>
+    set(s => { s.duyurular = s.duyurular.map(d => d.id === id ? { ...d, ...patch } : d); return s; }),
+  duyuruEkleDosya: (id: string, ek: DuyuruEk) =>
+    set(s => { s.duyurular = s.duyurular.map(d => d.id === id ? { ...d, ekler: [...(d.ekler ?? []), ek] } : d); return s; }),
+  duyuruSonucSorgulamaAyar: (id: string, aktif: boolean) =>
+    set(s => { s.duyurular = s.duyurular.map(d => d.id === id ? { ...d, sonucSorgulamaAktif: aktif } : d); return s; }),
+  duyuruSonuclarYukle: (id: string, sonuclar: DuyuruSonucKayit[]) =>
+    set(s => { s.duyurular = s.duyurular.map(d => d.id === id ? { ...d, sonuclar } : d); return s; }),
   duyuruSil: (id: string) =>
     set(s => { s.duyurular = s.duyurular.filter(d => d.id !== id); return s; }),
 
@@ -654,6 +925,89 @@ export const actions = {
       return s;
     }),
 
+  // ─ Başvuru Profili (Sihirbaz)
+  profilKaydet: (adayId: string, patch: Partial<BasvuruProfili>) => {
+    set(s => {
+      const idx = s.profiller.findIndex(p => p.adayId === adayId);
+      if (idx === -1) {
+        const yeni: BasvuruProfili = {
+          adayId,
+          kimlik: { uyruk: "T.C.", kimlikNo: adayId, ad: "", soyad: "", dogumTarihi: "", medeniHal: "", cinsiyet: "Erkek" },
+          sehitGazi: { varMi: false },
+          egitimler: [],
+          sinavlar: [],
+          sorumlulukBeyani: false,
+          kvkkOnayi: false,
+          guncelleme: now(),
+          ...patch,
+        };
+        s.profiller = [yeni, ...s.profiller];
+      } else {
+        s.profiller = s.profiller.map(p => p.adayId === adayId ? { ...p, ...patch, guncelleme: now() } : p);
+      }
+      return s;
+    });
+  },
+  egitimEkle: (adayId: string, egitim: Omit<EgitimKaydi, "id">) => {
+    const yeni: EgitimKaydi = { ...egitim, id: genId("EGT") };
+    set(s => {
+      s.profiller = s.profiller.map(p => p.adayId !== adayId ? p
+        : { ...p, egitimler: [yeni, ...p.egitimler], guncelleme: now() });
+      return s;
+    });
+    return yeni;
+  },
+  egitimSil: (adayId: string, id: string) =>
+    set(s => {
+      s.profiller = s.profiller.map(p => p.adayId !== adayId ? p
+        : { ...p, egitimler: p.egitimler.filter(e => e.id !== id), guncelleme: now() });
+      return s;
+    }),
+  sinavEkle: (adayId: string, sinav: Omit<SinavKaydi, "id" | "onayDurumu">) => {
+    const yeni: SinavKaydi = { ...sinav, id: genId("SNV"), onayDurumu: "beklemede" };
+    set(s => {
+      s.profiller = s.profiller.map(p => p.adayId !== adayId ? p
+        : { ...p, sinavlar: [yeni, ...p.sinavlar], guncelleme: now() });
+      return s;
+    });
+    return yeni;
+  },
+  sinavSil: (adayId: string, id: string) =>
+    set(s => {
+      s.profiller = s.profiller.map(p => p.adayId !== adayId ? p
+        : { ...p, sinavlar: p.sinavlar.filter(x => x.id !== id), guncelleme: now() });
+      return s;
+    }),
+  sinavOnayDegistir: (adayId: string, id: string, durum: SinavKaydi["onayDurumu"], not?: string) =>
+    set(s => {
+      s.profiller = s.profiller.map(p => p.adayId !== adayId ? p
+        : { ...p, sinavlar: p.sinavlar.map(x => x.id === id ? { ...x, onayDurumu: durum, onayNotu: not } : x) });
+      return s;
+    }),
+
+  // ─ Çağrılar (destek talepleri)
+  cagriAc: (payload: Omit<Cagri, "id" | "olusturma" | "durum" | "oncelik" | "mesajlar"> & { oncelik?: Cagri["oncelik"] }) => {
+    const yeni: Cagri = {
+      ...payload,
+      id: "CAG-" + new Date().getFullYear() + "-" + String(1000 + Math.floor(Math.random() * 9000)),
+      olusturma: now(),
+      durum: "acik",
+      oncelik: payload.oncelik ?? "Normal",
+      mesajlar: [{ gonderen: "aday", metin: payload.aciklama, tarih: now() }],
+    };
+    set(s => { s.cagrilar = [yeni, ...s.cagrilar]; return s; });
+    return yeni;
+  },
+  cagriDurumGuncelle: (id: string, durum: CagriDurum) =>
+    set(s => { s.cagrilar = s.cagrilar.map(c => c.id === id ? { ...c, durum } : c); return s; }),
+  cagriYanit: (id: string, gonderen: "aday" | "admin", metin: string) =>
+    set(s => {
+      s.cagrilar = s.cagrilar.map(c => c.id !== id ? c
+        : { ...c, mesajlar: [...c.mesajlar, { gonderen, metin, tarih: now() }],
+            durum: gonderen === "admin" ? "yanitlandi" : c.durum });
+      return s;
+    }),
+
   // ─ Reset (test/demo için)
   resetAll: () => { state = seed; notify(); },
 };
@@ -667,6 +1021,9 @@ export const select = {
   adayBelgeleri: (s: State, adayId: string) => s.belgeler.filter(b => b.adayId === adayId),
   adayBasvurulari: (s: State, adayId: string) => s.basvurular.filter(b => b.adayId === adayId),
   adayMesajlari: (s: State, adayId: string) => s.mesajlar.filter(m => m.alici === adayId || m.gonderen === adayId),
+  adayProfili: (s: State, adayId: string) => s.profiller.find(p => p.adayId === adayId) ?? null,
+  adayCagrilari: (s: State, adayId: string) => s.cagrilar.filter(c => c.adayId === adayId),
+  aktifCagriSayisi: (s: State) => s.cagrilar.filter(c => c.durum === "acik" || c.durum === "islemde").length,
   adayYerlestirmesi: (s: State, adayId: string) => {
     for (const y of s.yerlestirmeler.filter(x => x.yayinlandi)) {
       const r = y.sonuclar.find(x => x.adayId === adayId);

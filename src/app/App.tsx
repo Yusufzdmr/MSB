@@ -14,7 +14,12 @@ import {
 import AdminScreen from "./admin/AdminScreen";
 import OcrYukle from "./aday/OcrYukle";
 import SonucEkrani from "./aday/SonucEkrani";
-import { actions as storeActions } from "./shared/store";
+import BasvuruSihirbazi from "./aday/BasvuruSihirbazi";
+import { CagriListesi } from "./aday/CagriAcma";
+import CagriSinavDurumu from "./aday/CagriSinavDurumu";
+import TercihEkrani from "./aday/TercihEkrani";
+import DuyuruDetay from "./aday/DuyuruDetay";
+import { actions as storeActions, useStore as useSharedStore } from "./shared/store";
 
 // Turkish flag & institutional palette
 const TR = {
@@ -95,7 +100,7 @@ function GovStrip() {
   );
 }
 
-type Screen = "listings" | "detail" | "announcements" | "login" | "register" | "forgot" | "dashboard" | "edevlet"
+type Screen = "listings" | "detail" | "announcements" | "duyuru-detay" | "login" | "register" | "forgot" | "dashboard" | "edevlet"
   | "admin" | "aday-ocr" | "aday-sonuc";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -481,7 +486,7 @@ function Footer() {
 type LiveItem = { title: string; date?: string; href?: string; category?: string };
 type LivePayload = { source: "live" | "fallback"; fetchedAt: string; teminler: LiveItem[]; duyurular: LiveItem[] };
 
-function Screen1({ onDetail, onNav }: { onDetail: () => void; onNav: (s: Screen) => void }) {
+function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (s: Screen) => void; onDuyuru?: (id: string) => void }) {
   const [filter, setFilter] = useState("Tümü");
   const [openDuyuru, setOpenDuyuru] = useState<null | { title: string; date?: string; cat?: string }>(null);
   const [live, setLive] = useState<LivePayload | null>(null);
@@ -1264,19 +1269,17 @@ function Screen2({ onBack }: { onBack: () => void }) {
 // SCREEN 3 — ANNOUNCEMENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Screen3() {
+function Screen3({ onDuyuru }: { onDuyuru?: (id: string) => void }) {
   const [cat, setCat] = useState("Tümü");
   const [query, setQuery] = useState("");
   const [banner, setBanner] = useState(true);
   const [selected, setSelected] = useState<typeof ANNOUNCEMENTS[0] | null>(null);
 
-  const cats = ["Tümü", "Sınav Sonuçları", "Yerleştirme", "Genel", "Belge Talebi"];
+  const cats = ["Tümü", "Güncel Duyurular", "Güncel Teminler"];
 
   const catMap: Record<string, typeof ANNOUNCEMENTS[0]["cat"][]> = {
-    "Sınav Sonuçları": ["exam"],
-    "Yerleştirme": ["placement"],
-    "Genel": ["general"],
-    "Belge Talebi": ["document"],
+    "Güncel Duyurular": ["exam", "placement", "general", "document"],
+    "Güncel Teminler":  ["general", "document"],
   };
 
   const filtered = ANNOUNCEMENTS.filter(a => {
@@ -1385,7 +1388,14 @@ function Screen3() {
                 {filtered.map((item, idx) => (
                   <div key={item.id}
                     className={`group p-5 sm:p-6 hover:bg-[#F8FAFC] transition-colors cursor-pointer ${idx < filtered.length - 1 ? "border-b border-slate-100" : ""}`}
-                    onClick={() => setSelected(item)}
+                    onClick={() => {
+                      const t = item.title.toLowerCase();
+                      if (onDuyuru && (t.includes("yerleştirme") || t.includes("sonuç") || t.includes("çağrı durumu"))) {
+                        onDuyuru("D-001");
+                      } else {
+                        setSelected(item);
+                      }
+                    }}
                   >
                     <div className="flex gap-4 sm:gap-5">
                       {/* Date + timeline */}
@@ -2644,144 +2654,22 @@ function DashboardScreen({ onLogout, onOcr, onSonuc }: { onLogout: () => void; o
           {/* Content by view */}
           <div className="px-6 py-6">
 
-            {/* ═════ BİLGİLERİM — WIZARD ═════ */}
+            {/* ═════ BİLGİLERİM — BAŞVURU SİHİRBAZI (yeni modül) ═════ */}
             {view === "bilgilerim" && (
-              <>
-                {/* Wizard tabs */}
-                <div className="flex items-stretch overflow-x-auto border-b border-[#DDDDDD] mb-0 relative">
-                  {wizardTabs.map((t, i) => {
-                    const active = i === wizardStep;
-                    const done = i < wizardStep;
-                    return (
-                      <button key={i} onClick={() => setWizardStep(i)}
-                        className={`flex items-center gap-2 px-4 py-3 text-[13.5px] whitespace-nowrap border-b-2 transition-colors ${
-                          active ? "border-[#A82232] text-[#A82232] font-semibold" : "border-transparent text-[#888] hover:text-[#333]"
-                        }`}>
-                        <span className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
-                          active ? "bg-[#A82232] text-white" :
-                          done   ? "bg-[#7BA05B] text-white" :
-                                   "bg-[#CCCCCC] text-white"
-                        }`}>{done ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}</span>
-                        <span>{t}</span>
-                      </button>
-                    );
-                  })}
-                  <div className="ml-auto flex items-center gap-1.5 pl-4">
-                    <button disabled={wizardStep === 0} onClick={() => setWizardStep(s => Math.max(0, s - 1))} className={`${btnLight} disabled:opacity-50`}>
-                      <ChevronLeft className="w-3.5 h-3.5" /> Geri
-                    </button>
-                    <button disabled={wizardStep === wizardTabs.length - 1} onClick={() => setWizardStep(s => Math.min(wizardTabs.length - 1, s + 1))} className={`${btnCls} disabled:opacity-50`}>
-                      İleri <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border border-t-0 border-[#DDDDDD] bg-white">
-                  {wizardStep === 0 && (
-                    <table className="w-full">
-                      <tbody>
-                        {kimlikRows.map(([label, val], i) => (
-                          <tr key={label} className={i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"}>
-                            <td className="w-[220px] px-5 py-2 text-right text-[13px] text-[#555] font-medium border-b border-[#EEEEEE]">{label}</td>
-                            <td className="px-5 py-2 text-[13.5px] text-[#222] font-medium border-b border-[#EEEEEE]">{val || <span className="text-[#BBB]">—</span>}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                  {wizardStep === 1 && (
-                    <div className="p-6">
-                      <div className="flex items-start gap-3 p-3 rounded bg-[#E7F3F9] border border-[#B6DAEA] mb-4">
-                        <Info className="w-4 h-4 text-[#1F5372] flex-shrink-0 mt-0.5" strokeWidth={2} />
-                        <p className="text-[13px] text-[#1F5372]">Şehit veya gazi yakınıysanız aşağıdaki bilgileri eksiksiz doldurunuz. Belge yükleme adımı sınav bilgileri sekmesinde yer almaktadır.</p>
-                      </div>
-                      <table className="w-full">
-                        <tbody>
-                          {[
-                            ["Şehit / Gazi Yakınlığı Var mı?", "Hayır"],
-                            ["Yakınlık Derecesi", "—"],
-                            ["Şehit/Gazi Adı Soyadı", "—"],
-                            ["Şehit/Gazi TC Kimlik No", "—"],
-                            ["Belge Türü", "—"],
-                          ].map(([l, v], i) => (
-                            <tr key={l} className={i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"}>
-                              <td className="w-[280px] px-5 py-2 text-right text-[13px] text-[#555] border-b border-[#EEE]">{l}</td>
-                              <td className="px-5 py-2 text-[13.5px] text-[#222] border-b border-[#EEE]">{v}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {wizardStep >= 2 && (
-                    <div className="p-10 text-center">
-                      <div className="w-14 h-14 rounded-full bg-[#F5F5F5] border border-[#DDD] flex items-center justify-center mx-auto mb-3">
-                        <FileText className="w-6 h-6 text-[#888]" strokeWidth={1.5} />
-                      </div>
-                      <h3 className="text-[15px] font-semibold text-[#333] mb-1">{wizardTabs[wizardStep]}</h3>
-                      <p className="text-[13px] text-[#888] max-w-md mx-auto mb-4">
-                        Bu adımda ilgili bilgi ve belgeler talep edilmektedir. "İleri" tuşuna basarak sonraki adıma geçebilirsiniz.
-                      </p>
-                      <button onClick={() => setWizardStep(s => Math.min(wizardTabs.length - 1, s + 1))} className={btnCls}>İleri <ArrowRight className="w-3.5 h-3.5" /></button>
-                    </div>
-                  )}
-                </div>
-              </>
+              <BasvuruSihirbazi adayId="18878273464" />
             )}
 
-            {/* ═════ ÇAĞRI TAKİP ═════ */}
+            {/* ═════ ÇAĞRI TAKİP (destek talepleri) ═════ */}
             {view === "cagriTakip" && (
-              <MSBPanel title="Sorgulama Kriterleri" icon={<Search className="w-3.5 h-3.5 text-[#666]" />}
-                actions={<button className="text-[#888] hover:text-[#333] text-[16px]">−</button>}>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">
-                  {[
-                    { l: "Görüş No", type: "text" },
-                    { l: "Konu",     type: "select", opts: ["Tümü", "Genel", "Sınav", "Yerleştirme"] },
-                    { l: "Başlangıç Tarihi", type: "date" },
-                    { l: "Bitiş Tarihi",     type: "date" },
-                    { l: "Bildiren Kimlik No", type: "text" },
-                    { l: "Durumu",   type: "select", opts: ["Tümü", "Açık", "Kapalı", "Yanıtlandı"] },
-                    { l: "Tür",      type: "select", opts: ["Tümü", "Şikayet", "Öneri", "Talep"] },
-                    { l: "Öncelik",  type: "select", opts: ["Tümü", "Düşük", "Normal", "Yüksek"] },
-                    { l: "Çağrı Açıklama", type: "text" },
-                    { l: "Cevap",     type: "text" },
-                  ].map(f => (
-                    <div key={f.l} className="flex items-center gap-3">
-                      <label className="w-[140px] text-right text-[13px] text-[#555]">{f.l}</label>
-                      <div className="flex-1">
-                        {f.type === "select"
-                          ? <select className={inputCls}>{(f as any).opts.map((o: string) => <option key={o}>{o}</option>)}</select>
-                          : <input type={f.type} defaultValue={f.type === "date" ? "" : ""} className={inputCls} />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 mt-5 pt-4 border-t border-[#EEEEEE]">
-                  <button onClick={() => toast("Sorgu tamamlandı", { kind: "success", sub: "0 kayıt bulundu" })} className={btnCls}><Search className="w-3.5 h-3.5" /> Sorgula</button>
-                  <button onClick={() => toast("Kriterler temizlendi", { kind: "info" })} className={btnLight}><RotateCcw className="w-3.5 h-3.5" /> Temizle</button>
-                  <button onClick={() => toast("Yeni çağrı formu açıldı", { kind: "info", sub: "Çağrı numarası: #CAG-2026-" + Math.floor(Math.random() * 9000 + 1000) })} className="inline-flex items-center gap-2 px-3.5 py-1.5 text-[13px] font-semibold text-white bg-[#4A4A4A] hover:bg-[#333] rounded-[3px] ml-auto">
-                    <span className="text-[15px] leading-none">+</span> Yeni Çağrı Aç
-                  </button>
-                </div>
-              </MSBPanel>
+              <CagriListesi adayId="18878273464"
+                adayAd="Yusuf Özdemir"
+                adayEposta="yusuf.ozdemir@example.com"
+                adayTelefon="0555 111 22 33" />
             )}
 
-            {/* ═════ ÇAĞRI/SINAV DURUMU ═════ */}
+            {/* ═════ ÇAĞRI/SINAV DURUMU (başvurularım + sonuç) ═════ */}
             {view === "cagriSinav" && (
-              <MSBPanel title="Başvurularım">
-                <div className="flex items-center gap-3">
-                  <label className="w-[140px] text-right text-[13px] text-[#555]">Başvuru Seçiniz</label>
-                  <select className={inputCls + " max-w-md"}>
-                    <option>Seçiniz</option>
-                    <option>2026 Yılı Muvazzaf Subay Temini</option>
-                    <option>Sivil Memur Alımı — BT & Mühendislik</option>
-                    <option>Sözleşmeli Er Alımı — 3. Dönem</option>
-                  </select>
-                </div>
-                <div className="mt-6 p-8 text-center text-[13px] text-[#999] bg-[#FAFAFA] border border-dashed border-[#DDD] rounded">
-                  Sınav ve çağrı bilgilerini görüntülemek için yukarıdan başvuru seçiniz.
-                </div>
-              </MSBPanel>
+              <CagriSinavDurumu adayId="18878273464" />
             )}
 
             {/* ═════ MESAJLARIM ═════ */}
@@ -2816,8 +2704,13 @@ function DashboardScreen({ onLogout, onOcr, onSonuc }: { onLogout: () => void; o
               </MSBPanel>
             )}
 
-            {/* ═════ TERCİH YAP ═════ */}
+            {/* ═════ TERCİH YAP (2 panelli seçim) ═════ */}
             {view === "tercihYap" && (
+              <TercihEkrani adayId="18878273464" />
+            )}
+
+            {/* ═════ ESKİ TERCİH YAP — kaldırıldı, referans için tutulmuyor ═════ */}
+            {false && (
               <>
                 <MSBPanel title="Aktif Başvurunuz">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
@@ -3040,6 +2933,7 @@ function ToastHost({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id:
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("listings");
+  const [aktifDuyuruId, setAktifDuyuruId] = useState<string>("D-001");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   useEffect(() => {
@@ -3077,9 +2971,10 @@ export default function App() {
         </>
       )}
 
-      {screen === "listings"      && <Screen1 onDetail={() => setScreen("detail")} onNav={setScreen} />}
+      {screen === "listings"      && <Screen1 onDetail={() => setScreen("detail")} onNav={setScreen} onDuyuru={(id) => { setAktifDuyuruId(id); setScreen("duyuru-detay"); }} />}
       {screen === "detail"        && <Screen2 onBack={() => setScreen("listings")} />}
-      {screen === "announcements" && <Screen3 />}
+      {screen === "announcements" && <Screen3 onDuyuru={(id) => { setAktifDuyuruId(id); setScreen("duyuru-detay"); }} />}
+      {screen === "duyuru-detay"  && <DuyuruDetay duyuruId={aktifDuyuruId} onBack={() => setScreen("announcements")} />}
       {screen === "login"    && <LoginScreen    onHome={() => setScreen("listings")} onRegister={() => setScreen("register")} onForgot={() => setScreen("forgot")} onDashboard={() => setScreen("dashboard")} onEdevlet={() => setScreen("edevlet")} onAdmin={() => setScreen("admin")} />}
       {screen === "register" && <RegisterScreen onHome={() => setScreen("listings")} onLogin={() => setScreen("login")} onDashboard={() => setScreen("dashboard")} />}
       {screen === "forgot"   && <ForgotScreen   onHome={() => setScreen("listings")} onLogin={() => setScreen("login")} />}

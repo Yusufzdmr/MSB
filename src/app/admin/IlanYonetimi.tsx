@@ -1,7 +1,7 @@
 // İlan Yönetimi — CRUD, filtre, kontenjan/puan/tarih düzenleme.
 
 import { useState, useMemo } from "react";
-import { Plus, Edit3, Trash2, Search, Filter, Eye, Send, Archive } from "lucide-react";
+import { Plus, Edit3, Trash2, Search, Filter, Eye, Send, Archive, Play, Award } from "lucide-react";
 import { useStore, actions, type Ilan, type Kuvvet, type Sinif, type EgitimSeviyesi, type Cinsiyet, type IlanDurum } from "../shared/store";
 import { DataTable, Pill, Btn, Modal, Field, inputCls, selectCls, textareaCls, trTarih } from "../shared/ui";
 import { MSB } from "../shared/theme";
@@ -12,8 +12,8 @@ const EGT: EgitimSeviyesi[] = ["Lise", "Ön Lisans", "Lisans", "Yüksek Lisans",
 const CIN: Cinsiyet[] = ["Erkek", "Kadın", "Farketmez"];
 const DUR: IlanDurum[] = ["taslak", "yayin", "kapali", "yerlestirildi"];
 
-const durumTone = { taslak: "muted", yayin: "success", kapali: "danger", yerlestirildi: "info" } as const;
-const durumLabel = { taslak: "Taslak", yayin: "Yayında", kapali: "Kapalı", yerlestirildi: "Yerleştirildi" } as const;
+const durumTone = { taslak: "muted", yayin: "success", kapali: "warn", yerlestirildi: "info" } as const;
+const durumLabel = { taslak: "Taslak", yayin: "Aktif (Yayında)", kapali: "Süresi Doldu / İncelemede", yerlestirildi: "Sonuçlandı" } as const;
 
 const bosIlan: Omit<Ilan, "id" | "yerlesen" | "basvuranSayisi" | "olusturmaTarihi"> = {
   baslik: "", kuvvet: "Kara", sinif: "Subay", kontenjan: 100,
@@ -54,6 +54,16 @@ export default function IlanYonetimi() {
   const yayinla = (i: Ilan) => actions.ilanGuncelle(i.id, { durum: "yayin" });
   const kapat   = (i: Ilan) => actions.ilanGuncelle(i.id, { durum: "kapali" });
   const sil     = (i: Ilan) => { if (confirm(`"${i.baslik}" silinsin mi?`)) actions.ilanSil(i.id); };
+  const runSimulasyon = (id: string) => {
+    const y = actions.yerlestirmeCalistir(id, "otomatik", "yonetici");
+    alert(y ? `Simülasyon çalıştırıldı. ${y.sonuclar.length} aday değerlendirildi. Sonuçları yayınlamak için "Sonuçları Yayınla" tuşuna basın.` : "Simülasyon çalıştırılamadı.");
+  };
+  const yayinlaSonuc = (id: string) => {
+    const y = store.yerlestirmeler.find(x => x.ilanId === id && !x.yayinlandi);
+    if (!y) return alert("Önce simülasyonu çalıştırın.");
+    actions.yerlestirmeYayinla(y.id);
+    alert("Sonuçlar yayınlandı. İlan artık 'Güncel Duyurular' panelinde görünür.");
+  };
 
   const addKriter = () => {
     if (!krtInput.trim() || !editing) return;
@@ -108,10 +118,12 @@ export default function IlanYonetimi() {
               </div>
             ) },
           { key: "durum", header: "Durum", width: "110px", render: r => <Pill tone={durumTone[r.durum]}>{durumLabel[r.durum]}</Pill> },
-          { key: "act", header: "İşlem", width: "230px", align: "right", render: r => (
-              <div className="flex items-center gap-1 justify-end">
+          { key: "act", header: "İşlem", width: "340px", align: "right", render: r => (
+              <div className="flex items-center gap-1 justify-end flex-wrap">
                 {r.durum === "taslak" && <Btn size="sm" variant="success" onClick={() => yayinla(r)}><Send className="w-3 h-3" /> Yayınla</Btn>}
-                {r.durum === "yayin" && <Btn size="sm" variant="ghost" onClick={() => kapat(r)}><Archive className="w-3 h-3" /> Kapat</Btn>}
+                {r.durum === "yayin"  && <Btn size="sm" variant="ghost"   onClick={() => kapat(r)}><Archive className="w-3 h-3" /> Süreyi Bitir</Btn>}
+                {r.durum === "kapali" && <Btn size="sm" variant="ghost"   onClick={() => runSimulasyon(r.id)}><Play className="w-3 h-3" /> Simülasyon</Btn>}
+                {r.durum === "kapali" && <Btn size="sm" variant="success" onClick={() => yayinlaSonuc(r.id)}><Award className="w-3 h-3" /> Sonuçları Yayınla</Btn>}
                 <Btn size="sm" variant="ghost" onClick={() => openEdit(r)}><Edit3 className="w-3 h-3" /></Btn>
                 <Btn size="sm" variant="danger" onClick={() => sil(r)}><Trash2 className="w-3 h-3" /></Btn>
               </div>
