@@ -1055,33 +1055,69 @@ export const actions = {
       const y = s.yerlestirmeler.find(z => z.id === yerlestirmeId);
       if (!y) return s;
       s.yerlestirmeler = s.yerlestirmeler.map(z => z.id === yerlestirmeId ? { ...z, yayinlandi: true } : z);
-      // Başvuru durumlarını güncelle
+      const ilan = s.ilanlar.find(i => i.id === y.ilanId);
+      // Başvuru durumlarını ayrıntılı güncelle (asil / yedek / yerleşmedi)
       const yerlesenIds = new Set(y.sonuclar.filter(r => r.durum === "yerlesti").map(r => r.adayId));
+      const yedekMap   = new Map(y.sonuclar.filter(r => r.durum === "yedek").map(r => [r.adayId, r.yedekSirasi]));
       s.basvurular = s.basvurular.map(b => {
         if (b.ilanId !== y.ilanId) return b;
-        return { ...b, durum: yerlesenIds.has(b.adayId) ? "yerlestirildi" : "yerlestirilmedi" };
+        if (yerlesenIds.has(b.adayId)) return { ...b, durum: "yerlestirildi", yedekSirasi: undefined };
+        if (yedekMap.has(b.adayId))    return { ...b, durum: "yedek", yedekSirasi: yedekMap.get(b.adayId) };
+        return { ...b, durum: "yerlestirilmedi" };
       });
       // İlan sayaçları
       s.ilanlar = s.ilanlar.map(i => i.id === y.ilanId ? { ...i, yerlesen: yerlesenIds.size, durum: "yerlestirildi" } : i);
-      // Otomatik duyuru + kişisel mesajlar
+      // Otomatik duyuru — "[İlan Adı] Sonuç Çağrı Durumu" + sonuç sorgulama AKTİF + sonuçlar yüklü
+      const sonucKayitlari: DuyuruSonucKayit[] = y.sonuclar.map(r => {
+        const aday = s.adaylar.find(a => a.id === r.adayId);
+        const statu: DuyuruSonucKayit["statu"] =
+          r.durum === "yerlesti" ? "Asil" : r.durum === "yedek" ? "Yedek" : "Yerleşemedi";
+        return {
+          tc: r.adayId, ad: aday?.ad ?? "", soyad: aday?.soyad ?? "",
+          program: ilan?.baslik, statu,
+          sira: r.durum === "yerlesti"
+            ? y.sonuclar.filter(x => x.durum === "yerlesti").findIndex(x => x.adayId === r.adayId) + 1
+            : r.yedekSirasi,
+          puan: r.puan,
+          sonucKodu: `SR-${new Date().getFullYear()}-${r.adayId.slice(0, 3)}${String(r.puan).replace(".", "")}`,
+          sonucTarihi: now(),
+        };
+      });
       s.duyurular = [{
         id: genId("D"),
-        baslik: `${s.ilanlar.find(i => i.id === y.ilanId)?.baslik ?? "İlan"} — Yerleştirme Sonuçları`,
-        ozet: `Toplam ${yerlesenIds.size} aday yerleştirilmiştir. Sonuçlarınızı panelinizden sorgulayabilirsiniz.`,
-        icerik: "Yerleşen adaylar için evrak teslim süreci başlamıştır. Yedek adaylar boş kalan kontenjanlara sırayla çağrılacaktır.",
+        baslik: `${ilan?.baslik ?? "İlan"} — Sonuç Çağrı Durumu`,
+        ozet: `Toplam ${yerlesenIds.size} aday asil, ${yedekMap.size} aday yedek olarak yerleştirilmiştir. TCKN ile sonucunuzu sorgulayabilirsiniz.`,
+        icerik: "Yerleşen adaylar için kesin kayıt süreci başlamıştır. Yedek adaylar boş kalan kontenjanlara sırayla çağrılacaktır.",
         kategori: "yerlestirme", onemli: true,
         yayinTarihi: now(), yayinlayan: "PGM",
+        ilanId: y.ilanId,
+        sonucSorgulamaAktif: true,       // Spec: SONUÇ SORGULA otomatik AÇIK
+        sonuclar: sonucKayitlari,         // Spec: admin toplu liste otomatik yüklü
       }, ...s.duyurular];
-      const yeniMesajlar: Mesaj[] = y.sonuclar.map(r => ({
-        id: genId("M"),
-        konu: "Yerleştirme Sonucu",
-        icerik: r.durum === "yerlesti"
-          ? "Tebrikler, ilgili ilan için yerleştirilmiş bulunmaktasınız. Sonuç belgenizi panelinizden indirebilirsiniz."
-          : r.durum === "yedek"
-          ? "Yerleştirme sonucunda yedek listesine alındınız. Boş kalan kontenjanlar için çağrılabilirsiniz."
-          : "Yerleştirme sonucunda kadro dahilinde değerlendirilememişsinizdir.",
-        gonderen: "admin", alici: r.adayId, tarih: now(), okundu: false,
-      }));
+      // Aday panel mesajları — spec: "1. Tercihinize Asil Yerleştiniz", "Yedek Sırada Bekliyor (2. Yedek)"
+      const yeniMesajlar: Mesaj[] = y.sonuclar.map(r => {
+        let konu = "Yerleştirme Sonucu";
+        let icerik = "";
+        let tur: MesajTur = "bilgi";
+        if (r.durum === "yerlesti") {
+          konu = `${r.tercihSirasi}. Tercihinize Asil Yerleştiniz`;
+          icerik = `Tebrikler! <strong>${ilan?.baslik ?? "İlan"}</strong> için <strong>${r.tercihSirasi}. tercihinize</strong> Asil olarak yerleştiniz. Nihai puanınız <strong>${r.puan.toFixed(2)}</strong>. Kesin kayıt sürecini panelinizden başlatabilirsiniz.`;
+          tur = "basari";
+        } else if (r.durum === "yedek") {
+          konu = `Yedek Sırada Bekliyorsunuz (${r.yedekSirasi}. Yedek)`;
+          icerik = `<strong>${ilan?.baslik ?? "İlan"}</strong> için <strong>${r.yedekSirasi}. yedek</strong> sırada bekliyorsunuz. Nihai puanınız <strong>${r.puan.toFixed(2)}</strong>. Asil kontenjan boşalırsa sıradaki adaya bildirim gönderilir; sıra size gelene kadar ödeme yapmanız gerekmez.`;
+          tur = "uyari";
+        } else {
+          konu = "Puan Yetersizliği / Kontenjan Doldu";
+          icerik = `<strong>${ilan?.baslik ?? "İlan"}</strong> için kadro dahilinde değerlendirilemediniz. Nihai puanınız <strong>${r.puan.toFixed(2)}</strong>. Bu sonuç tebligat yerine geçmektedir.`;
+          tur = "hata";
+        }
+        return {
+          id: genId("M"), konu, icerik,
+          gonderen: "admin", alici: r.adayId, tarih: now(), okundu: false,
+          tur, onemli: r.durum === "yerlesti", ilanId: y.ilanId,
+        };
+      });
       s.mesajlar = [...yeniMesajlar, ...s.mesajlar];
       return s;
     }),
