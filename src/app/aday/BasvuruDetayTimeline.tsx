@@ -128,7 +128,17 @@ export default function BasvuruDetayTimeline({ adayId }: { adayId: string }) {
       }
     });
 
-    return ol.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+    // Tarihi olan olayları kronolojik, tarihi olmayanları eklendikleri (mantıksal) sıraya göre koru.
+    // Push edildiği doğal sırayı korumak için stable sort — index bazlı fallback:
+    const indexed = ol.map((e, i) => ({ e, i }));
+    indexed.sort((A, B) => {
+      const da = A.e.date, db = B.e.date;
+      if (da && db) return da.localeCompare(db);
+      if (da && !db) return -1;  // tarihli olan önce
+      if (!da && db) return 1;
+      return A.i - B.i;          // ikisi de tarihsizse orijinal sıra
+    });
+    return indexed.map(x => x.e);
   }, [aktif, ilan, yerlestirmeler, cagrilar, tercihler, adayId]);
 
   if (basvurular.length === 0) {

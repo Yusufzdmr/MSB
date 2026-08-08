@@ -30,10 +30,15 @@ export default function Odeme({ adayId }: { adayId: string }) {
     return il?.odemeKurali && il.odemeKurali !== "yok" && il.ucretTutari && b.odemeDurumu !== "alindi" && b.odemeDurumu !== "iade_edildi";
   }), [basvurular, ilanlar]);
 
-  const kopyala = (t: string, ne: string) => {
-    navigator.clipboard.writeText(t);
-    setKopyalandi(ne);
-    setTimeout(() => setKopyalandi(null), 1500);
+  const kopyala = (t: string | undefined, ne: string) => {
+    if (!t) return;
+    try {
+      navigator.clipboard?.writeText(String(t));
+      setKopyalandi(ne);
+      setTimeout(() => setKopyalandi(null), 1500);
+    } catch (err) {
+      console.warn("Clipboard yazılamadı:", err);
+    }
   };
 
   const gonder = () => {

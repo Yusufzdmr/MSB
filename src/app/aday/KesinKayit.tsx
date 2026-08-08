@@ -134,7 +134,7 @@ export default function KesinKayit({ adayId }: { adayId: string }) {
                     </div>
                   </div>
                 </div>
-                <button className={btnDrk} onClick={() => actions.kesinKayitTamamla(aktif.id, [], false) /* reset */}>Belgeleri Düzelt ve Yeniden Yükle</button>
+                <button className={btnDrk} onClick={() => { actions.kesinKayitReset(aktif.id); setEvraklar({}); setTaahhut(false); }}>Belgeleri Düzelt ve Yeniden Yükle</button>
               </div>
             ) : aktif.kesinKayitDurumu === "feragat" ? (
               <div className="p-8 text-center text-[#888]">

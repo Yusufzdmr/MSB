@@ -45,12 +45,13 @@ export default function IlanYonetimi() {
   const openEdit = (i: Ilan) => { setEditing(i); setKrtInput(""); };
   const close    = () => { setEditing(null); setKrtInput(""); };
 
-  const save = () => {
+  const save = (overrideDurum?: IlanDurum) => {
     if (!editing || !editing.baslik) return alert("Başlık zorunlu.");
-    if (editing.id) {
-      actions.ilanGuncelle(editing.id, editing);
+    const payload = overrideDurum ? { ...editing, durum: overrideDurum } : editing;
+    if (payload.id) {
+      actions.ilanGuncelle(payload.id, payload);
     } else {
-      actions.ilanEkle(editing as Omit<Ilan, "id" | "yerlesen" | "basvuranSayisi" | "olusturmaTarihi" | "durum"> & { durum?: IlanDurum });
+      actions.ilanEkle(payload as Omit<Ilan, "id" | "yerlesen" | "basvuranSayisi" | "olusturmaTarihi" | "durum"> & { durum?: IlanDurum });
     }
     close();
   };
@@ -156,8 +157,8 @@ export default function IlanYonetimi() {
         title={editing?.id ? `İlan Düzenle — ${editing.id}` : "Yeni İlan Oluştur (Sihirbaz)"}
         footer={<>
           <Btn variant="ghost" onClick={close}>İptal</Btn>
-          <Btn onClick={() => { if (editing) setEditing({ ...editing, durum: "taslak" }); save(); }}>Taslak Kaydet</Btn>
-          <Btn onClick={() => { if (editing) setEditing({ ...editing, durum: "yayin" }); save(); }}><Send className="w-3.5 h-3.5" /> İlanı Yayınla</Btn>
+          <Btn onClick={() => save("taslak")}>Taslak Kaydet</Btn>
+          <Btn onClick={() => save("yayin")}><Send className="w-3.5 h-3.5" /> İlanı Yayınla</Btn>
         </>}>
         {editing && (
           <div className="grid grid-cols-2 gap-4">

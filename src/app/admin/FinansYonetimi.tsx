@@ -16,18 +16,24 @@ export default function FinansYonetimi() {
   const inceleniyor = useMemo(() => store.basvurular.filter(b => b.odemeDurumu === "inceleniyor"), [store.basvurular]);
   const iadeAdaylar = useMemo(() => store.basvurular.filter(b => b.odemeDurumu === "iade_edilecek"), [store.basvurular]);
 
-  // Açıkta kalıp ödeme yapmış olanları "iade_edilecek" olarak işaretle (mock)
+  // Açıkta kalıp (yalnızca "yerlesmedi") ödeme yapmış olanları "iade_edilecek" olarak işaretle.
+  // Yedekler asile yükselme ihtimali olduğu için iade edilmez.
+  // Yalnızca "iade mekanizması aktif" olan ilanlarda iade uygulanır.
   const iadeAdayCikar = () => {
     const yerlestirmeler = store.yerlestirmeler.filter(y => y.yayinlandi);
-    const yedekYerlesemeyen = new Set<string>();
+    const yerlesemeyenler = new Set<string>();
     yerlestirmeler.forEach(y => {
-      y.sonuclar.filter(r => r.durum === "yedek" || r.durum === "yerlesmedi").forEach(r => yedekYerlesemeyen.add(r.adayId));
+      y.sonuclar.filter(r => r.durum === "yerlesmedi").forEach(r => yerlesemeyenler.add(r.adayId + "|" + y.ilanId));
     });
-    const iadeGerekenler = store.basvurular.filter(b => yedekYerlesemeyen.has(b.adayId) && b.odemeDurumu === "alindi");
-    if (iadeGerekenler.length === 0) return alert("Şu an iade edilmesi gereken kayıt yok.");
-    // Mark all
-    iadeGerekenler.forEach(b => actions.odemeReddet(b.id, "İade sürecine alındı."));
-    alert(`${iadeGerekenler.length} adayın ödemesi iade listesine eklendi.`);
+    const iadeGerekenler = store.basvurular.filter(b => {
+      if (!yerlesemeyenler.has(b.adayId + "|" + b.ilanId)) return false;
+      if (b.odemeDurumu !== "alindi") return false;
+      const ilan = store.ilanlar.find(i => i.id === b.ilanId);
+      return !!ilan?.iadeMekanizmasi;
+    });
+    if (iadeGerekenler.length === 0) return alert("Şu an iade edilmesi gereken kayıt yok.\n(Yerleşemeyen + ödemesi onaylı + iade mekanizması aktif ilan koşullarını sağlayan aday yok.)");
+    actions.iadeyeAyir(iadeGerekenler.map(b => b.id));
+    alert(`${iadeGerekenler.length} adayın ödemesi iade listesine eklendi. Muhasebe için CSV listeyi indirebilirsiniz.`);
   };
 
   const iadeIndir = () => {

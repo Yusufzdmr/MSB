@@ -1,7 +1,7 @@
 // Duyuru Yönetimi — CRUD + dosya ekleri, sonuç sorgulama toggle, toplu sonuç yükleme,
 // zengin metin editörü (Bold/Italic/H1-3/Liste/Tablo).
 
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   Plus, Trash2, Megaphone, Star, Upload, FileText, ToggleLeft, ToggleRight,
   Bold, Italic, Underline, List, ListOrdered, Table as TableIcon, Heading1, Heading2, Heading3,
@@ -19,13 +19,25 @@ const kategoriMap: Record<Duyuru["kategori"], { label: string; tone: "muted" | "
   sistem:      { label: "Sistem",        tone: "red"     },
 };
 
-// ─── Basit zengin metin editörü ──────────────────────────────────────────────
+// ─── Basit zengin metin editörü — uncontrolled (caret jump'ı önlemek için) ──
 function RichEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const lastValueRef = useRef<string>("");
+  React.useEffect(() => {
+    if (ref.current && value !== lastValueRef.current && document.activeElement !== ref.current) {
+      ref.current.innerHTML = value ?? "";
+      lastValueRef.current = value ?? "";
+    }
+  }, [value]);
   const exec = (cmd: string, arg?: string) => {
     ref.current?.focus();
     document.execCommand(cmd, false, arg);
-    if (ref.current) onChange(ref.current.innerHTML);
+    if (ref.current) { lastValueRef.current = ref.current.innerHTML; onChange(ref.current.innerHTML); }
+  };
+  const onInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const html = (e.target as HTMLDivElement).innerHTML;
+    lastValueRef.current = html;
+    onChange(html);
   };
   const insertTable = () => {
     const rows = Math.max(1, parseInt(prompt("Satır sayısı?", "3") || "0", 10));
@@ -71,10 +83,11 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
       <div
         ref={ref}
         contentEditable
+        suppressContentEditableWarning
         className="p-3 text-[13px] min-h-[180px] focus:outline-none prose-sm max-w-none"
         style={{ lineHeight: 1.5 }}
-        onInput={e => onChange((e.target as HTMLDivElement).innerHTML)}
-        dangerouslySetInnerHTML={{ __html: value || "<p>Duyuru içeriğinizi buraya yazın…</p>" }}
+        data-placeholder="Duyuru içeriğinizi buraya yazın…"
+        onInput={onInput}
       />
     </div>
   );
@@ -105,6 +118,8 @@ export default function DuyuruYonetimi() {
 
   const save = () => {
     if (!editing || !editing.baslik) return alert("Başlık zorunlu.");
+    // Placeholder içeriğini temizle (RichEditor'ün initial mesajı store'a gitmesin)
+    const icerikTemiz = (icerik ?? "").replace(/<p>Duyuru içeriğinizi buraya yazın…<\/p>/g, "").trim();
     let sonuclar = editing.sonuclar;
     if (sonucJson.trim()) {
       try { sonuclar = JSON.parse(sonucJson) as DuyuruSonucKayit[]; }
@@ -112,13 +127,13 @@ export default function DuyuruYonetimi() {
     }
     if (editing.id) {
       actions.duyuruGuncelle(editing.id, {
-        ...editing, icerik, sonuclar,
+        ...editing, icerik: icerikTemiz, sonuclar,
       });
     } else {
       actions.duyuruEkle({
         baslik: editing.baslik,
         ozet: editing.ozet ?? "",
-        icerik,
+        icerik: icerikTemiz,
         kategori: (editing.kategori ?? "genel") as Duyuru["kategori"],
         onemli: !!editing.onemli,
         yayinlayan: editing.yayinlayan ?? "PGM",

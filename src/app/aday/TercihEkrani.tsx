@@ -58,9 +58,12 @@ export default function TercihEkrani({ adayId }: { adayId: string }) {
   // Kayıtlı tercihleri programa göre çözümle
   const kayitliCozumlu = useMemo(() => {
     return kayitli.map((t, idx) => {
-      // t.ilanId aslında altProgramId — id ilan-id ile başlıyor
-      const ilanId = ilanlar.find(i => t.ilanId.startsWith(i.id))?.id ?? t.ilanId;
-      const ilan = ilanlar.find(i => i.id === ilanId);
+      // altProgramId formatı: `${ilanId}-<suffix>` — exact prefix eşleşmesi için `-` sınırlayıcısı zorunlu.
+      // En uzun eşleşen ilan id'sini seç (birden fazla eşleşme olasılığına karşı)
+      const eslesenIlanlar = ilanlar
+        .filter(i => t.ilanId === i.id || t.ilanId.startsWith(i.id + "-"))
+        .sort((a, b) => b.id.length - a.id.length);
+      const ilan = eslesenIlanlar[0] ?? null;
       const grup = ilan ? altProgramlar(ilan).flatMap(g => g.programlar).find(p => p.id === t.ilanId) : null;
       return { sira: idx + 1, tercih: t, ilan, program: grup };
     });

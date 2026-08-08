@@ -751,9 +751,34 @@ function autoExpireIlanlar(s: State): State {
 let state: State = autoExpireIlanlar(loadInitial());
 const listeners = new Set<() => void>();
 
+// Periyodik olarak bitiş tarihi geçen ilanları "kapali" statüsüne çek (60sn'de bir)
+if (typeof window !== "undefined") {
+  setInterval(() => {
+    const yeni = autoExpireIlanlar(state);
+    if (yeni !== state) {
+      state = yeni;
+      notify();
+    }
+  }, 60_000);
+}
+
+let quotaUyariGosterildi = false;
 function persist() {
   if (typeof window === "undefined") return;
-  try { window.localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* quota veya SSR */ }
+  try {
+    window.localStorage.setItem(LS_KEY, JSON.stringify(state));
+  } catch (err) {
+    // Quota aşımı — kullanıcıyı bir kere uyar, tekrar tekrar alert atma
+    if (!quotaUyariGosterildi) {
+      quotaUyariGosterildi = true;
+      const msg = "⚠️ Tarayıcı yerel depolama alanı doldu (LocalStorage quota).\n\n" +
+        "Muhtemel neden: Vesikalık fotoğraf ve PDF adları çoğaldı.\n" +
+        "Değişiklikleriniz bu oturumda görünür, ancak sayfa yenilenirse kaybolabilir.\n\n" +
+        "Çözüm: Tarayıcı depolamayı temizleyin veya bazı fotoğraf/PDF'leri kaldırın.";
+      setTimeout(() => { try { window.alert(msg); } catch { /* SSR */ } }, 0);
+      console.error("[store] LocalStorage quota exceeded:", err);
+    }
+  }
 }
 
 function notify() {
@@ -1168,6 +1193,10 @@ export const actions = {
       }, ...s.mesajlar];
       return s;
     }),
+  // Açıkta kalanları "iade_edilecek" olarak işaretle (henüz iade yapılmadı, muhasebe bekliyor)
+  iadeyeAyir: (basvuruIds: string[]) =>
+    set(s => { s.basvurular = s.basvurular.map(b => basvuruIds.includes(b.id) ? { ...b, odemeDurumu: "iade_edilecek" } : b); return s; }),
+  // Muhasebe iadeyi yaptıktan sonra "iade_edildi" olarak arşive alır
   iadeIsaretle: (basvuruIds: string[]) =>
     set(s => { s.basvurular = s.basvurular.map(b => basvuruIds.includes(b.id) ? { ...b, odemeDurumu: "iade_edildi" } : b); return s; }),
 
@@ -1197,6 +1226,12 @@ export const actions = {
     set(s => {
       s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b
         : { ...b, kesinKayitEvraklar: evraklar, taahhutOnayi: taahhut, kesinKayitDurumu: "inceleniyor" });
+      return s;
+    }),
+  kesinKayitReset: (basvuruId: string) =>
+    set(s => {
+      s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b
+        : { ...b, kesinKayitDurumu: "beklemede", kesinKayitEvraklar: undefined, taahhutOnayi: false, kesinKayitRedNedeni: undefined });
       return s;
     }),
   kesinKayitAdminOnay: (basvuruId: string, onay: boolean, gerekce?: string) =>

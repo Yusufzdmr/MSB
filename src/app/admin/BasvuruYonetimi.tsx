@@ -1,7 +1,7 @@
 // Admin Başvuru Yönetimi — ilan × aday matrix, durum + rich text gerekçe +
 // tebligat PDF + "Adaya Gönder" (kilitler + adayın paneline yansır).
 
-import { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   Users, Send, Lock, FileText, Upload, X, Search, Check,
   Bold, Italic, Underline, Heading1, Heading2, Heading3, List, ListOrdered,
@@ -24,13 +24,26 @@ const durumMap: Record<Basvuru["durum"], { label: string; tone: "muted" | "info"
 
 const DURUMLAR: Basvuru["durum"][] = ["hazirlaniyor", "gonderildi", "belge_onay_bekliyor", "onaylandi", "yedek", "yerlestirildi", "yerlestirilmedi", "reddedildi"];
 
-// Basit rich text editör
+// Basit rich text editör — uncontrolled contentEditable (caret jump'ı önlemek için)
 function RichEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Yalnızca mount'ta ve dış value programatik değiştiğinde DOM'u ayarla
+  const lastValueRef = useRef<string>("");
+  React.useEffect(() => {
+    if (ref.current && value !== lastValueRef.current && document.activeElement !== ref.current) {
+      ref.current.innerHTML = value ?? "";
+      lastValueRef.current = value ?? "";
+    }
+  }, [value]);
   const exec = (cmd: string, arg?: string) => {
     ref.current?.focus();
     document.execCommand(cmd, false, arg);
-    if (ref.current) onChange(ref.current.innerHTML);
+    if (ref.current) { lastValueRef.current = ref.current.innerHTML; onChange(ref.current.innerHTML); }
+  };
+  const onInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const html = (e.target as HTMLDivElement).innerHTML;
+    lastValueRef.current = html;
+    onChange(html);
   };
   const btn = "w-[28px] h-[28px] flex items-center justify-center hover:bg-[#EEE] rounded text-[#555]";
   return (
@@ -58,10 +71,10 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
       <div
         ref={ref}
         contentEditable
+        suppressContentEditableWarning
         className="p-3 text-[13px] min-h-[140px] focus:outline-none"
         style={{ lineHeight: 1.5 }}
-        onInput={e => onChange((e.target as HTMLDivElement).innerHTML)}
-        dangerouslySetInnerHTML={{ __html: value || "" }}
+        onInput={onInput}
       />
     </div>
   );
