@@ -280,10 +280,35 @@ function Header({ activeScreen, onNav }: { activeScreen: Screen; onNav: (s: Scre
 
   return (
     <header className="sticky top-0 z-50 shadow-[0_2px_6px_rgba(0,0,0,0.08)]" style={{ fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" }}>
-      {/* Top thin T.C. bar */}
+      {/* En üstte turuncu/siyah şerit — sosyal medya + T.C. */}
+      <div className="bg-[#2C2C2C] text-white text-[10.5px]">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 h-7 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {[
+              { Ic: Twitter,  url: "https://x.com/tcsavunma",       label: "X" },
+              { Ic: Youtube,  url: "https://youtube.com/@tcsavunma", label: "YouTube" },
+              { Ic: Globe,    url: "https://www.msb.gov.tr",         label: "MSB" },
+              { Ic: Mail,     url: "mailto:info@msb.gov.tr",         label: "E-posta" },
+            ].map(({ Ic, url, label }) => (
+              <a key={url} href={url} target={url.startsWith("http") ? "_blank" : undefined} rel="noreferrer noopener" title={label}
+                className="w-4 h-4 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+                <Ic className="w-3 h-3" strokeWidth={2} />
+              </a>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 font-semibold tracking-wider uppercase">
+            <span className="w-3 h-3 rounded-full bg-[#E30A17] flex items-center justify-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+            </span>
+            <span className="text-[10px]">T.C. Türkiye Cumhuriyeti · Millî Savunma Bakanlığı</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Kırmızı sub-şerit */}
       <div className="bg-[#E30A17] text-white text-[10.5px] font-semibold tracking-widest uppercase">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 h-6 flex items-center justify-between">
-          <span>T.C. Türkiye Cumhuriyeti · Millî Savunma Bakanlığı</span>
+          <span>Personel Genel Müdürlüğü · Personel Temin Daire Başkanlığı</span>
           <div className="hidden sm:flex items-center gap-3 text-white/90">
             <a href="https://www.turkiye.gov.tr" target="_blank" rel="noreferrer noopener" className="hover:underline">turkiye.gov.tr</a>
             <span>·</span>
@@ -795,6 +820,111 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
           {/* Dinamik İlan Takvimi */}
           <div className="mt-6">
             <IlanTakvimi onDetay={() => onDetail()} />
+          </div>
+        </div>
+      </section>
+
+      {/* ═════════════ HIZLI ERİŞİM — Referans 2 ═════════════ */}
+      <section className="bg-white border-b border-[#DDDDDD]">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">
+          <h2 className="text-center text-[15px] font-black tracking-[0.4em] text-[#333] mb-6" style={{ letterSpacing: "0.4em" }}>
+            H I Z L I &nbsp; E R İ Ş İ M
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-[820px] mx-auto">
+            {[
+              { l: "Sıkça Sorulan Sorular", h: "#sss" },
+              { l: "Hukuki Mevzuat",         h: "#mevzuat" },
+              { l: "Dilekçe Örneği",         h: "#dilekce" },
+              { l: "Tanıtım",                h: "#tanitim" },
+              { l: "İletişim",               h: "#iletisim" },
+              { l: "E-İmza Doğrulama",       h: "https://www.turkiye.gov.tr/belge-dogrulama" },
+              { l: "CİMER",                  h: "https://www.cimer.gov.tr", isCimer: true },
+              { l: "Aydınlatma Metni",       h: "#kvkk" },
+            ].map(item => (
+              <a key={item.l} href={item.h}
+                target={item.h.startsWith("http") ? "_blank" : undefined}
+                rel="noreferrer noopener"
+                className="flex items-center justify-center min-h-[62px] px-4 border-2 border-[#DDD] rounded text-center hover:border-[#A82232] hover:text-[#A82232] transition-colors bg-white">
+                {item.isCimer ? (
+                  <span className="flex items-center gap-1.5 text-[13px] font-bold">
+                    <span className="text-[#A82232] font-black italic">CİMER</span>
+                    <span className="text-[9px] text-[#888] leading-none">CUMHURBAŞKANLIĞI<br />İLETİŞİM MERKEZİ</span>
+                  </span>
+                ) : (
+                  <span className="text-[13px] font-semibold text-[#333]">{item.l}</span>
+                )}
+              </a>
+            ))}
+          </div>
+
+          {/* MSB binası silueti */}
+          <div className="mt-10 flex flex-col items-center opacity-60">
+            <svg viewBox="0 0 400 120" className="w-full max-w-[500px] h-auto" aria-hidden>
+              {/* Bina ana gövde */}
+              <rect x="20" y="60" width="360" height="50" fill="#CCC" />
+              <rect x="150" y="30" width="100" height="30" fill="#BBB" />
+              {/* Bayrak direği + bayrak */}
+              <line x1="200" y1="0" x2="200" y2="30" stroke="#333" strokeWidth="1.5" />
+              <rect x="200" y="4" width="18" height="10" fill="#E30A17" />
+              {/* Pencereler */}
+              {Array.from({ length: 18 }, (_, i) => (
+                <rect key={i} x={30 + i * 20} y={70} width="10" height="15" fill="#888" />
+              ))}
+              {Array.from({ length: 4 }, (_, i) => (
+                <rect key={"m" + i} x={155 + i * 22} y={40} width="10" height="12" fill="#666" />
+              ))}
+              {/* Sütunlar (giriş) */}
+              <rect x="180" y="85" width="6" height="25" fill="#AAA" />
+              <rect x="195" y="85" width="6" height="25" fill="#AAA" />
+              <rect x="210" y="85" width="6" height="25" fill="#AAA" />
+              {/* Zemin */}
+              <rect x="0" y="110" width="400" height="10" fill="#DDD" />
+            </svg>
+            <div className="text-center mt-3 text-[11px] text-[#666]">
+              <div className="font-semibold">Millî Savunma Bakanlığı — Personel Temin Daire Başkanlığı</div>
+              <div className="mt-0.5">Cebeci Mahallesi Tıp Fakültesi Caddesi P.K. 06620 Cebeci / Ankara &nbsp;·&nbsp; 0 (312) 562 05 43</div>
+            </div>
+          </div>
+
+          {/* 7 kurumsal amblem şeridi */}
+          <div className="mt-6 pt-6 border-t border-[#EEE]">
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <span className="text-[#DDD]">★</span>
+              {[
+                { url: "https://www.tccb.gov.tr",    label: "T.C. Cumhurbaşkanlığı",        color: "#8B1A25" },
+                { url: "https://www.tbmm.gov.tr",    label: "TBMM",                          color: "#333" },
+                { url: "https://www.msb.gov.tr",     label: "Millî Savunma Bakanlığı",       color: "#A82232" },
+                { url: "https://www.tsk.tr",         label: "Genelkurmay Başkanlığı",        color: "#5E7F42" },
+                { url: "https://www.kkk.tsk.tr",     label: "Kara Kuvvetleri Komutanlığı",   color: "#4A6634" },
+                { url: "https://www.dzkk.tsk.tr",    label: "Deniz Kuvvetleri Komutanlığı",  color: "#1F5372" },
+                { url: "https://www.hvkk.tsk.tr",    label: "Hava Kuvvetleri Komutanlığı",   color: "#365688" },
+              ].map(k => (
+                <a key={k.url} href={k.url} target="_blank" rel="noreferrer noopener" title={k.label}
+                  className="w-12 h-12 rounded-full border-2 flex items-center justify-center hover:scale-110 transition-transform"
+                  style={{ borderColor: k.color, background: "#fff" }}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: k.color }}>
+                    <span className="text-white text-[8px] font-black text-center leading-tight px-0.5">
+                      {k.label.split(" ").map(w => w[0]).join("").slice(0, 3)}
+                    </span>
+                  </div>
+                </a>
+              ))}
+              <span className="text-[#DDD]">★</span>
+            </div>
+            {/* Sosyal medya */}
+            <div className="flex items-center justify-center gap-3 mt-5">
+              {[
+                { Ic: Twitter,  url: "https://x.com/tcsavunma" },
+                { Ic: Youtube,  url: "https://youtube.com/@tcsavunma" },
+                { Ic: Globe,    url: "https://www.msb.gov.tr" },
+                { Ic: Mail,     url: "mailto:info@msb.gov.tr" },
+              ].map(({ Ic, url }) => (
+                <a key={url} href={url} target="_blank" rel="noreferrer noopener"
+                  className="w-9 h-9 rounded-full border border-[#DDD] flex items-center justify-center text-[#666] hover:text-[#A82232] hover:border-[#A82232] transition-colors">
+                  <Ic className="w-3.5 h-3.5" strokeWidth={2} />
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </section>
