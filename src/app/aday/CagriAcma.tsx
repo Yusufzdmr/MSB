@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X, Info, ChevronLeft, ArrowRight, Check, Upload, Image as ImageIcon, MessageSquare, Trash2, Search } from "lucide-react";
 import { MSB } from "../shared/theme";
-import { actions, useStore, type CagriKategori, type Cagri } from "../shared/store";
+import { actions, useStore, ITIRAZ_KATEGORILERI, type CagriKategori, type Cagri } from "../shared/store";
 
 const inp = "w-full h-[34px] px-3 text-[13px] bg-white border border-[#CCCCCC] rounded-[3px] focus:outline-none focus:border-[#A82232] focus:ring-1 focus:ring-[#A82232]/20";
 const inpDis = inp + " bg-[#F5F5F5] text-[#888] cursor-not-allowed";
@@ -58,7 +58,8 @@ export function CagriAcmaPopup({ open, onClose, adayId, adayAd, adayEposta, aday
   open: boolean; onClose: () => void;
   adayId: string; adayAd: string; adayEposta: string; adayTelefon: string;
 }) {
-  const ilanlar = useStore(s => s.ilanlar.filter(i => i.durum === "yayin" || i.durum === "kapali"));
+  const ilanlar = useStore(s => s.ilanlar.filter(i => i.durum === "yayin" || i.durum === "kapali" || i.durum === "yerlestirildi"));
+  const yerlestirmeler = useStore(s => s.yerlestirmeler.filter(y => y.yayinlandi));
   const [step, setStep] = useState<1 | 2>(1);
   const [kategori, setKategori] = useState<CagriKategori | "">("");
   const [altKategori, setAltKategori] = useState("");
@@ -72,7 +73,11 @@ export function CagriAcmaPopup({ open, onClose, adayId, adayAd, adayEposta, aday
 
   const katObj = KATEGORILER.find(k => k.ad === kategori);
   const onerVeGorus = kategori === "Öneri" || kategori === "Görüş";
-  const canStep1 = !!kategori && !!eposta && !!telefon && (onerVeGorus || (!!altKategori && !!alimId));
+  const itirazMi = ITIRAZ_KATEGORILERI.includes(kategori as CagriKategori);
+  // 72 saat itiraz süresi kontrolü — sonuç yayınlandıktan itibaren
+  const secilenIlanYerlestirme = alimId ? yerlestirmeler.find(y => y.ilanId === alimId) : null;
+  const sureAsimi = !!(itirazMi && secilenIlanYerlestirme && (Date.now() - new Date(secilenIlanYerlestirme.tarih).getTime()) > 72 * 3600 * 1000);
+  const canStep1 = !!kategori && !!eposta && !!telefon && (onerVeGorus || (!!altKategori && !!alimId)) && !sureAsimi;
   const canFinish = canStep1 && !!aciklama.trim();
 
   const reset = () => {
@@ -168,6 +173,16 @@ export function CagriAcmaPopup({ open, onClose, adayId, adayAd, adayEposta, aday
                       {ilanlar.map(i => <option key={i.id} value={i.id}>{i.baslik}</option>)}
                     </select>
                   </div>
+                  {sureAsimi && (
+                    <div className="p-3 rounded border md:col-span-2" style={{ background: "#FBECEE", borderColor: "#E8B5BB", color: MSB.red }}>
+                      <div className="flex items-start gap-2 text-[12.5px]">
+                        <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <strong>⏱ İtiraz süresi dolmuştur.</strong> Sonuç yayımlandıktan sonraki <strong>72 saat</strong> içinde bu kategoride çağrı açabilirdiniz. Bu süre aşıldığı için yeni itiraz kaydı oluşturulamaz.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
               {onerVeGorus && (

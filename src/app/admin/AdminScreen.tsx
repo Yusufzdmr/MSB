@@ -19,10 +19,11 @@ import MesajYonetimi from "./MesajYonetimi";
 import BasvuruYonetimi from "./BasvuruYonetimi";
 import KesinKayitYonetimi from "./KesinKayitYonetimi";
 import FinansYonetimi from "./FinansYonetimi";
+import CagriYonetimi from "./CagriYonetimi";
 
 export type AdminView =
   | "dashboard" | "ilanlar" | "basvurular" | "adaylar" | "belgeler"
-  | "yerlestirme" | "kesinkayit" | "finans" | "duyurular" | "mesajlar" | "ayarlar";
+  | "yerlestirme" | "kesinkayit" | "finans" | "duyurular" | "mesajlar" | "cagrilar" | "ayarlar";
 
 const menu: { id: AdminView; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; badge?: (s: ReturnType<typeof useStore>) => number | null }[] = [
   { id: "dashboard",   label: "Dashboard",       icon: LayoutDashboard },
@@ -34,6 +35,7 @@ const menu: { id: AdminView; label: string; icon: React.ComponentType<{ classNam
   { id: "kesinkayit",  label: "Kesin Kayıt",     icon: Award, badge: s => s.basvurular.filter(b => b.kesinKayitDurumu === "inceleniyor").length || null },
   { id: "finans",      label: "Finans / İade",    icon: CreditCard, badge: s => s.basvurular.filter(b => b.odemeDurumu === "inceleniyor" || b.odemeDurumu === "iade_edilecek").length || null },
   { id: "duyurular",   label: "Duyurular",       icon: Megaphone },
+  { id: "cagrilar",    label: "Çağrı Yönetimi",  icon: MessageSquare,   badge: s => s.cagrilar.filter(c => c.durum === "acik" || c.durum === "islemde").length || null },
   { id: "mesajlar",    label: "Mesajlar",        icon: MessageSquare,   badge: s => s.mesajlar.filter(m => !m.okundu && m.alici === "admin").length || null },
   { id: "ayarlar",     label: "Ayarlar",         icon: Settings },
 ];
@@ -154,6 +156,7 @@ export default function AdminScreen({ onLogout }: { onLogout: () => void }) {
             {view === "kesinkayit"  && <KesinKayitYonetimi />}
             {view === "finans"      && <FinansYonetimi />}
             {view === "duyurular"   && <DuyuruYonetimi />}
+            {view === "cagrilar"    && <CagriYonetimi />}
             {view === "mesajlar"    && <MesajYonetimi />}
             {view === "ayarlar"     && <AyarlarPanel />}
           </div>
