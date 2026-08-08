@@ -17,27 +17,35 @@ export type EgitimSeviyesi = "Lise" | "Ön Lisans" | "Lisans" | "Yüksek Lisans"
 export type Cinsiyet = "Erkek" | "Kadın" | "Farketmez";
 export type IlanDurum = "taslak" | "yayin" | "kapali" | "yerlestirildi";
 
+export type AltBirim = { ad: string; kontenjanAsil: number; kontenjanYedek: number };
 export type Ilan = {
   id: string;
   baslik: string;
+  kurum?: string;              // Kurum/Birim (yeni)
   kuvvet: Kuvvet;
   sinif: Sinif;
-  kontenjan: number;
+  kontenjan: number;           // toplam (asil)
+  kontenjanYedek?: number;     // toplam yedek (yeni)
   yerlesen: number;
   basvuranSayisi: number;
   baslangic: string; // ISO YYYY-MM-DD
+  baslangicSaat?: string;      // HH:MM (yeni)
   bitis: string;
-  minPuan: number;      // KPSS/AGS/YDS eşik
+  bitisSaat?: string;          // HH:MM (yeni)
+  minPuan: number;
+  sinavSarti?: SinavTuru;      // hangi sınav zorunlu (yeni)
   egitim: EgitimSeviyesi;
   cinsiyet: Cinsiyet;
   yasMin: number;
   yasMax: number;
-  boyMin?: number;      // cm
+  boyMin?: number;
   aciklama: string;
   sehir: string;
   durum: IlanDurum;
-  olusturmaTarihi: string; // ISO datetime
-  kriterler: string[];  // özel kriterler (örn: ehliyet, yabancı dil)
+  olusturmaTarihi: string;
+  kriterler: string[];
+  kilavuzAdi?: string;         // İlan kılavuz PDF adı (yeni)
+  altBirimler?: AltBirim[];    // Alt birim kontenjanları (yeni)
 };
 
 export type BelgeTipi =
@@ -94,10 +102,14 @@ export type Basvuru = {
   adayId: string;
   ilanId: string;
   basvuruTarihi: string;
-  durum: "hazirlaniyor" | "gonderildi" | "onaylandi" | "reddedildi" | "yerlestirildi" | "yerlestirilmedi";
-  puan: number;              // aday'ın bu ilan için toplam puanı
+  durum: "hazirlaniyor" | "gonderildi" | "onaylandi" | "reddedildi" | "yerlestirildi" | "yerlestirilmedi" | "belge_onay_bekliyor" | "yedek";
+  puan: number;
   redGerekce?: string;
-  yerlestirmeSirasi?: number; // yerleşme durumunda sıra
+  yerlestirmeSirasi?: number;
+  adminGerekce?: string;       // Rich text — admin tarafından yazılan gerekçe
+  tebligatBelgesi?: string;    // Ek PDF adı (opsiyonel)
+  gonderildi?: boolean;        // Adaya bildirim yayımlandı mı?
+  gonderilmeTarihi?: string;
 };
 
 export type Tercih = {
@@ -129,15 +141,19 @@ export type Duyuru = {
   sonuclar?: DuyuruSonucKayit[];
 };
 
+export type MesajTur = "bilgi" | "uyari" | "basari" | "hata" | "sistem";
 export type Mesaj = {
   id: string;
   konu: string;
   icerik: string;
-  gonderen: string;           // "admin" veya adayId
-  alici: string;              // adayId veya "admin" veya "broadcast"
+  gonderen: string;
+  alici: string;
   tarih: string;
   okundu: boolean;
-  yanitId?: string;           // thread için
+  yanitId?: string;
+  tur?: MesajTur;             // uyarı rengi için (yeni)
+  onemli?: boolean;           // yeni
+  ilanId?: string;            // ilişkili ilan (yeni)
 };
 
 export type Yerlestirme = {
@@ -359,7 +375,7 @@ const seedIlanlar: Ilan[] = [
     kuvvet: "Kara",
     sinif: "Subay",
     kontenjan: 450, yerlesen: 0, basvuranSayisi: 312,
-    baslangic: "2026-06-01", bitis: "2026-09-15",
+    baslangic: "2026-06-01", baslangicSaat: "09:00", bitis: "2026-09-15", bitisSaat: "23:59",
     minPuan: 70, egitim: "Lisans", cinsiyet: "Farketmez",
     yasMin: 21, yasMax: 27, boyMin: 165,
     aciklama: "Kara Kuvvetleri Komutanlığı bünyesinde muvazzaf subay temini.",
@@ -786,6 +802,43 @@ export const actions = {
   },
   basvuruDurumGuncelle: (id: string, durum: Basvuru["durum"], redGerekce?: string) =>
     set(s => { s.basvurular = s.basvurular.map(b => b.id === id ? { ...b, durum, redGerekce } : b); return s; }),
+
+  // Admin: rich text gerekçe + tebligat PDF + adaya gönder (kilitler)
+  basvuruAdminIslem: (id: string, patch: {
+    durum?: Basvuru["durum"]; adminGerekce?: string; tebligatBelgesi?: string;
+  }, gonder = false) => {
+    set(s => {
+      s.basvurular = s.basvurular.map(b => b.id !== id ? b : {
+        ...b, ...patch,
+        gonderildi: gonder ? true : b.gonderildi,
+        gonderilmeTarihi: gonder ? now() : b.gonderilmeTarihi,
+      });
+      if (gonder) {
+        const bsv = s.basvurular.find(b => b.id === id);
+        if (bsv) {
+          const ilan = s.ilanlar.find(i => i.id === bsv.ilanId);
+          const durum = patch.durum ?? bsv.durum;
+          const konu = durum === "onaylandi" ? "Başvurunuz Onaylandı"
+                     : durum === "reddedildi" ? "Başvurunuz Reddedildi"
+                     : durum === "yerlestirildi" ? "Yerleştirme Sonucu — Asil"
+                     : durum === "yedek" ? "Yerleştirme Sonucu — Yedek"
+                     : durum === "belge_onay_bekliyor" ? "Belge Onayı Bekleniyor"
+                     : "Başvuru Durumu Güncellendi";
+          const tur: MesajTur = durum === "reddedildi" ? "hata"
+                              : durum === "yerlestirildi" || durum === "onaylandi" ? "basari"
+                              : durum === "yedek" ? "uyari" : "bilgi";
+          s.mesajlar = [{
+            id: genId("M"), konu,
+            icerik: patch.adminGerekce ?? "Başvuru durumunuz güncellendi. Detay için ilgili sayfaya bakınız.",
+            gonderen: "admin", alici: bsv.adayId, tarih: now(), okundu: false,
+            tur, onemli: durum === "reddedildi" || durum === "yerlestirildi",
+            ilanId: bsv.ilanId,
+          }, ...s.mesajlar];
+        }
+      }
+      return s;
+    });
+  },
 
   // ─ Tercihler
   tercihKaydet: (adayId: string, siralar: { ilanId: string; sira: number }[]) =>

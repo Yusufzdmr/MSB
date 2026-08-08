@@ -1,8 +1,8 @@
 // İlan Yönetimi — CRUD, filtre, kontenjan/puan/tarih düzenleme.
 
 import { useState, useMemo } from "react";
-import { Plus, Edit3, Trash2, Search, Filter, Eye, Send, Archive, Play, Award } from "lucide-react";
-import { useStore, actions, type Ilan, type Kuvvet, type Sinif, type EgitimSeviyesi, type Cinsiyet, type IlanDurum } from "../shared/store";
+import { Plus, Edit3, Trash2, Search, Filter, Eye, Send, Archive, Play, Award, Upload, FileText, X } from "lucide-react";
+import { useStore, actions, type Ilan, type Kuvvet, type Sinif, type EgitimSeviyesi, type Cinsiyet, type IlanDurum, type AltBirim, type SinavTuru } from "../shared/store";
 import { DataTable, Pill, Btn, Modal, Field, inputCls, selectCls, textareaCls, trTarih } from "../shared/ui";
 import { MSB } from "../shared/theme";
 
@@ -15,12 +15,16 @@ const DUR: IlanDurum[] = ["taslak", "yayin", "kapali", "yerlestirildi"];
 const durumTone = { taslak: "muted", yayin: "success", kapali: "warn", yerlestirildi: "info" } as const;
 const durumLabel = { taslak: "Taslak", yayin: "Aktif (Yayında)", kapali: "Süresi Doldu / İncelemede", yerlestirildi: "Sonuçlandı" } as const;
 
+const SINAVLAR: SinavTuru[] = ["YDS", "YKS", "AGS", "TUS", "DUS", "YDT", "MSÜ", "DGS", "KPSS Lisans", "KPSS Ön Lisans", "ALES", "TR-YÖS"];
+
 const bosIlan: Omit<Ilan, "id" | "yerlesen" | "basvuranSayisi" | "olusturmaTarihi"> = {
-  baslik: "", kuvvet: "Kara", sinif: "Subay", kontenjan: 100,
-  baslangic: new Date().toISOString().slice(0, 10),
-  bitis: new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10),
+  baslik: "", kurum: "", kuvvet: "Kara", sinif: "Subay",
+  kontenjan: 100, kontenjanYedek: 30,
+  baslangic: new Date().toISOString().slice(0, 10), baslangicSaat: "09:00",
+  bitis: new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10), bitisSaat: "23:59",
   minPuan: 70, egitim: "Lisans", cinsiyet: "Farketmez",
   yasMin: 21, yasMax: 30, aciklama: "", sehir: "Türkiye Geneli", durum: "taslak", kriterler: [],
+  altBirimler: [],
 };
 
 export default function IlanYonetimi() {
@@ -134,20 +138,31 @@ export default function IlanYonetimi() {
       />
 
       {/* Edit / New modal */}
-      <Modal open={!!editing} onClose={close} size="lg"
-        title={editing?.id ? `İlan Düzenle — ${editing.id}` : "Yeni İlan Oluştur"}
+      <Modal open={!!editing} onClose={close} size="xl"
+        title={editing?.id ? `İlan Düzenle — ${editing.id}` : "Yeni İlan Oluştur (Sihirbaz)"}
         footer={<>
           <Btn variant="ghost" onClick={close}>İptal</Btn>
-          <Btn onClick={save}>Kaydet</Btn>
+          <Btn onClick={() => { if (editing) setEditing({ ...editing, durum: "taslak" }); save(); }}>Taslak Kaydet</Btn>
+          <Btn onClick={() => { if (editing) setEditing({ ...editing, durum: "yayin" }); save(); }}><Send className="w-3.5 h-3.5" /> İlanı Yayınla</Btn>
         </>}>
         {editing && (
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">1. Temel Bilgiler</h4>
+            </div>
             <div className="col-span-2">
-              <Field label="Başlık" required>
+              <Field label="İlan Adı / Başlığı" required>
                 <input value={editing.baslik ?? ""} onChange={e => setEditing({ ...editing, baslik: e.target.value })}
-                  className={inputCls} placeholder="Örn: 2026 Yılı Muvazzaf Subay Temini" />
+                  className={inputCls} placeholder="Örn: KARA, DENİZ VE HAVA KUVVETLERİ KOMUTANLIKLARINA UZMAN ERBAŞ TEMİNİ" />
               </Field>
             </div>
+            <Field label="Kurum / Birim">
+              <input value={editing.kurum ?? ""} onChange={e => setEditing({ ...editing, kurum: e.target.value })}
+                className={inputCls} placeholder="Örn: Personel Genel Müdürlüğü — Temin Daire Bşk." />
+            </Field>
+            <Field label="Şehir(ler)">
+              <input className={inputCls} value={editing.sehir ?? ""} onChange={e => setEditing({ ...editing, sehir: e.target.value })} />
+            </Field>
 
             <Field label="Kuvvet Komutanlığı" required>
               <select className={selectCls} value={editing.kuvvet} onChange={e => setEditing({ ...editing, kuvvet: e.target.value as Kuvvet })}>
@@ -160,22 +175,96 @@ export default function IlanYonetimi() {
               </select>
             </Field>
 
-            <Field label="Kontenjan" required>
-              <input type="number" min={1} className={inputCls} value={editing.kontenjan}
-                onChange={e => setEditing({ ...editing, kontenjan: Number(e.target.value) })} />
-            </Field>
-            <Field label="Min. Puan (KPSS/YKS)" required>
-              <input type="number" min={0} max={100} step={0.1} className={inputCls} value={editing.minPuan}
-                onChange={e => setEditing({ ...editing, minPuan: Number(e.target.value) })} />
-            </Field>
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1 mt-3">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">2. Takvim ve Zaman Planlaması</h4>
+              <p className="text-[10.5px] text-[#888] mt-0.5">Bitiş tarih/saati dolduğunda sistem otomatik olarak tercih butonlarını kapatır ve ilanı "Süresi Doldu / İncelemede" statüsüne alır.</p>
+            </div>
 
-            <Field label="Başvuru Başlangıç" required>
+            <Field label="Başvuru Başlangıç Tarihi" required>
               <input type="date" className={inputCls} value={editing.baslangic}
                 onChange={e => setEditing({ ...editing, baslangic: e.target.value })} />
             </Field>
-            <Field label="Başvuru Bitiş" required>
+            <Field label="Başlangıç Saati">
+              <input type="time" className={inputCls} value={editing.baslangicSaat ?? "09:00"}
+                onChange={e => setEditing({ ...editing, baslangicSaat: e.target.value })} />
+            </Field>
+            <Field label="Başvuru Bitiş Tarihi" required>
               <input type="date" className={inputCls} value={editing.bitis}
                 onChange={e => setEditing({ ...editing, bitis: e.target.value })} />
+            </Field>
+            <Field label="Bitiş Saati">
+              <input type="time" className={inputCls} value={editing.bitisSaat ?? "23:59"}
+                onChange={e => setEditing({ ...editing, bitisSaat: e.target.value })} />
+            </Field>
+
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1 mt-3">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">3. İlan Kılavuzu (PDF)</h4>
+            </div>
+            <div className="col-span-2">
+              <Field label="Resmi Kılavuz PDF (Aday tercih ekranında incelenir)">
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex items-center gap-2 h-[34px] px-3 text-[13px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCC] rounded-[3px] cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" /> Dosya Seç
+                    <input type="file" accept="application/pdf" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) setEditing({ ...editing, kilavuzAdi: f.name }); }} />
+                  </label>
+                  {editing.kilavuzAdi && (
+                    <span className="flex items-center gap-1.5 text-[12.5px] text-[#333]">
+                      <FileText className="w-3.5 h-3.5 text-[#A82232]" /> {editing.kilavuzAdi}
+                      <button onClick={() => setEditing({ ...editing, kilavuzAdi: undefined })} className="text-[#A82232]"><X className="w-3.5 h-3.5" /></button>
+                    </span>
+                  )}
+                </div>
+              </Field>
+            </div>
+
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1 mt-3">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">4. Kontenjan Tanımlama</h4>
+            </div>
+            <Field label="Toplam Asil Kontenjan" required>
+              <input type="number" min={1} className={inputCls} value={editing.kontenjan}
+                onChange={e => setEditing({ ...editing, kontenjan: Number(e.target.value) })} />
+            </Field>
+            <Field label="Toplam Yedek Kontenjan">
+              <input type="number" min={0} className={inputCls} value={editing.kontenjanYedek ?? 0}
+                onChange={e => setEditing({ ...editing, kontenjanYedek: Number(e.target.value) })} />
+            </Field>
+
+            <div className="col-span-2">
+              <Field label="Alt Birimler (Opsiyonel — her alt birim için asil/yedek)" hint="Örn: Kara Harp Okulu: 100 Asil / 50 Yedek">
+                <div className="space-y-1.5">
+                  {(editing.altBirimler ?? []).map((ab, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <input className={inputCls + " flex-1"} placeholder="Alt birim adı" value={ab.ad}
+                        onChange={e => setEditing({ ...editing, altBirimler: (editing.altBirimler ?? []).map((x, j) => j === i ? { ...x, ad: e.target.value } : x) })} />
+                      <input type="number" className={inputCls + " w-24"} placeholder="Asil" value={ab.kontenjanAsil}
+                        onChange={e => setEditing({ ...editing, altBirimler: (editing.altBirimler ?? []).map((x, j) => j === i ? { ...x, kontenjanAsil: Number(e.target.value) } : x) })} />
+                      <input type="number" className={inputCls + " w-24"} placeholder="Yedek" value={ab.kontenjanYedek}
+                        onChange={e => setEditing({ ...editing, altBirimler: (editing.altBirimler ?? []).map((x, j) => j === i ? { ...x, kontenjanYedek: Number(e.target.value) } : x) })} />
+                      <button onClick={() => setEditing({ ...editing, altBirimler: (editing.altBirimler ?? []).filter((_, j) => j !== i) })}
+                        className="text-[#A82232] p-1"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                  ))}
+                  <Btn variant="light" size="sm" onClick={() => setEditing({ ...editing, altBirimler: [...(editing.altBirimler ?? []), { ad: "", kontenjanAsil: 0, kontenjanYedek: 0 } as AltBirim] })}>
+                    <Plus className="w-3.5 h-3.5" /> Alt Birim Ekle
+                  </Btn>
+                </div>
+              </Field>
+            </div>
+
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1 mt-3">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">5. Kriter ve Koşul Tanımları</h4>
+            </div>
+
+            <Field label="Sınav Şartı" hint="Bu ilana başvurmak için zorunlu sınav">
+              <select className={selectCls} value={editing.sinavSarti ?? ""} onChange={e => setEditing({ ...editing, sinavSarti: (e.target.value || undefined) as SinavTuru | undefined })}>
+                <option value="">Şart yok</option>
+                {SINAVLAR.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </Field>
+            <Field label="Min. Puan (Taban)" required>
+              <input type="number" min={0} max={500} step={0.1} className={inputCls} value={editing.minPuan}
+                onChange={e => setEditing({ ...editing, minPuan: Number(e.target.value) })} />
             </Field>
 
             <Field label="Eğitim Seviyesi" required>

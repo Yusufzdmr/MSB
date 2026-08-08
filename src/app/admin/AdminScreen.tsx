@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, ClipboardList, Users, FileCheck2, Shuffle,
   Megaphone, MessageSquare, Settings, LogOut, Menu, Bell, Search, User as UserIcon,
+  UserCheck,
 } from "lucide-react";
 import { MSB, FONT } from "../shared/theme";
 import { useStore, actions, select } from "../shared/store";
@@ -15,14 +16,16 @@ import BelgeOnay from "./BelgeOnay";
 import Yerlestirme from "./Yerlestirme";
 import DuyuruYonetimi from "./DuyuruYonetimi";
 import MesajYonetimi from "./MesajYonetimi";
+import BasvuruYonetimi from "./BasvuruYonetimi";
 
 export type AdminView =
-  | "dashboard" | "ilanlar" | "adaylar" | "belgeler"
+  | "dashboard" | "ilanlar" | "basvurular" | "adaylar" | "belgeler"
   | "yerlestirme" | "duyurular" | "mesajlar" | "ayarlar";
 
 const menu: { id: AdminView; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; badge?: (s: ReturnType<typeof useStore>) => number | null }[] = [
   { id: "dashboard",   label: "Dashboard",       icon: LayoutDashboard },
   { id: "ilanlar",     label: "İlanlar",         icon: ClipboardList,  badge: s => select.aktifIlanSayisi(s) },
+  { id: "basvurular",  label: "Başvuru Yönetimi", icon: UserCheck,      badge: s => s.basvurular.filter(b => b.durum === "gonderildi" || b.durum === "belge_onay_bekliyor").length || null },
   { id: "adaylar",     label: "Adaylar",         icon: Users,           badge: s => select.toplamAday(s) },
   { id: "belgeler",    label: "Belge Onay",      icon: FileCheck2,     badge: s => select.bekleyenBelgeSayisi(s) || null },
   { id: "yerlestirme", label: "Yerleştirme",     icon: Shuffle },
@@ -140,6 +143,7 @@ export default function AdminScreen({ onLogout }: { onLogout: () => void }) {
           <div className="p-4 sm:p-5">
             {view === "dashboard"   && <AdminDashboard onGoto={setView} />}
             {view === "ilanlar"     && <IlanYonetimi />}
+            {view === "basvurular"  && <BasvuruYonetimi />}
             {view === "adaylar"     && <AdayYonetimi q={q} />}
             {view === "belgeler"    && <BelgeOnay />}
             {view === "yerlestirme" && <Yerlestirme />}
