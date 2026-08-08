@@ -718,8 +718,8 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
               <div className="bg-[#FBECEE] divide-y divide-[#E8B5BB]">
                 {featured.slice(0, 4).map((f, i) => (
                   <button key={i}
-                    onClick={() => { onDetail(); scrollToId("guncel-teminler"); }}
-                    title="İlan detayına git"
+                    onClick={() => onDuyuru ? onDuyuru("D-004") : onDetail()}
+                    title="Başvuru duyurusuna git"
                     className="w-full text-left px-5 py-3.5 hover:bg-[#F5D6DA] transition-colors group">
                     <div className="text-[13px] font-bold text-[#333] leading-snug mb-1 line-clamp-2 group-hover:text-[#A82232]">{f.title}</div>
                     <div className="flex items-center gap-3 text-[11px] text-[#666]">
@@ -746,14 +746,17 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
               </div>
               <div className="bg-white divide-y divide-[#EEE]">
                 {duyurular.slice(0, 4).map((d, i) => {
-                  // Sonuç/yerleştirme içeren duyuru → direkt DuyuruDetay (SONUÇ SORGULA'lı)
-                  // Aksi halde tüm duyurular listesi
-                  const t = d.title.toLowerCase();
-                  const gitSonuc = onDuyuru && (t.includes("yerleştirme") || t.includes("sonuç") || t.includes("çağrı durumu"));
+                  const t = d.title.toUpperCase();
+                  const gitSonuc = onDuyuru && /YERLEŞTİRME|SONUÇ|ÇAĞRI DURUMU/i.test(t);
+                  const gitBasvuru = onDuyuru && /TEMİN|ALIM|BAŞVURU|UZMAN ERBAŞ/i.test(t);
                   return (
                     <button key={i}
-                      onClick={() => gitSonuc ? onDuyuru!("D-001") : onNav("announcements")}
-                      title={gitSonuc ? "Sonuç sorgulama sayfasına git" : "Tüm duyurulara git"}
+                      onClick={() => {
+                        if (gitSonuc) onDuyuru!("D-001");
+                        else if (gitBasvuru) onDuyuru!("D-004");
+                        else onNav("announcements");
+                      }}
+                      title={gitSonuc ? "Sonuç sorgulama sayfasına git" : gitBasvuru ? "Başvuru duyurusuna git" : "Tüm duyurulara git"}
                       className="w-full text-left px-5 py-3 hover:bg-[#FAFAFA] transition-colors flex items-start gap-3">
                       <div className="flex flex-col items-center justify-center min-w-[46px] py-1 bg-[#F5F5F5] border border-[#DDD] rounded flex-shrink-0">
                         <div className="text-[9.5px] font-bold uppercase text-[#888] tracking-wider">{d.ay}</div>
@@ -765,6 +768,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
                         <div className="flex items-center gap-2 text-[10.5px]">
                           <span className="text-[#888] uppercase tracking-wider font-semibold">{d.cat}</span>
                           {gitSonuc && <span className="ml-auto inline-flex items-center gap-1 font-bold uppercase tracking-wider text-[#4A6FA5]">Sorgula <ChevronRight className="w-3 h-3" strokeWidth={2.5} /></span>}
+                          {gitBasvuru && !gitSonuc && <span className="ml-auto inline-flex items-center gap-1 font-bold uppercase tracking-wider text-[#A82232]">Başvur <ChevronRight className="w-3 h-3" strokeWidth={2.5} /></span>}
                         </div>
                       </div>
                     </button>
@@ -1504,8 +1508,12 @@ function Screen3({ onDuyuru }: { onDuyuru?: (id: string) => void }) {
                   <li key={item.id}>
                     <button
                       onClick={() => {
-                        if (onDuyuru && isSonucAcik) onDuyuru("D-001");
-                        else setSelected(item);
+                        // TEMİN başlıklı → D-004 (Uzman Erbaş başvuru duyurusu), sonuç → D-001
+                        if (onDuyuru) {
+                          if (isSonucAcik) onDuyuru("D-001");
+                          else if (isTemin) onDuyuru("D-004");
+                          else setSelected(item);
+                        } else setSelected(item);
                       }}
                       className="w-full flex items-start gap-4 px-5 py-4 hover:bg-[#FAFAFA] transition-colors text-left group">
                       {/* Tarih küpü — TEMİN kırmızı, DUYURU koyu gri */}
