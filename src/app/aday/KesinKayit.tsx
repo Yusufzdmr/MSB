@@ -240,7 +240,7 @@ export default function KesinKayit({ adayId }: { adayId: string }) {
           <div className="relative bg-white rounded shadow-[0_20px_60px_rgba(0,0,0,0.35)] w-full max-w-lg">
             <header className="px-5 h-[52px] border-b flex items-center gap-3" style={{ background: MSB.red, color: "#fff" }}>
               <AlertCircle className="w-4 h-4" />
-              <h2 className="text-[14px] font-extrabold uppercase tracking-wide flex-1">Kesin Kayıt Feragat Onayı</h2>
+              <h2 className="text-[14.5px] font-bold tracking-normal flex-1">Kesin Kayıt Feragat Onayı</h2>
               <button onClick={() => setFeragatDialog(false)} className="text-white/85 hover:text-white p-1"><X className="w-4 h-4" /></button>
             </header>
             <div className="p-5 space-y-3">

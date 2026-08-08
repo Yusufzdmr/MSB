@@ -104,7 +104,7 @@ export function CagriAcmaPopup({ open, onClose, adayId, adayAd, adayEposta, aday
       <div className="relative bg-white rounded shadow-[0_20px_60px_rgba(0,0,0,0.35)] w-full max-w-3xl max-h-[92vh] flex flex-col">
         <header className="flex items-center gap-3 px-5 h-[52px] border-b flex-shrink-0" style={{ background: MSB.red, color: "#fff" }}>
           <MessageSquare className="w-4 h-4" />
-          <h2 className="text-[14px] font-extrabold uppercase tracking-wide">Yeni Çağrı Açma — Adım {step}/2</h2>
+          <h2 className="text-[14.5px] font-bold tracking-normal">Yeni Çağrı Açma — Adım {step}/2</h2>
           <button onClick={onClose} className="ml-auto text-white/85 hover:text-white p-1"><X className="w-4 h-4" /></button>
         </header>
 
@@ -355,7 +355,7 @@ export function CagriListesi({ adayId, adayAd, adayEposta, adayTelefon }: {
           <div className="relative bg-white rounded shadow-[0_20px_60px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[92vh] flex flex-col">
             <header className="flex items-center gap-3 px-5 h-[52px] border-b flex-shrink-0" style={{ background: MSB.red, color: "#fff" }}>
               <MessageSquare className="w-4 h-4" />
-              <h2 className="text-[14px] font-extrabold uppercase tracking-wide">Çağrı: {secili.id}</h2>
+              <h2 className="text-[14.5px] font-bold tracking-normal">Çağrı: {secili.id}</h2>
               <button onClick={() => setSecili(null)} className="ml-auto text-white/85 hover:text-white p-1"><X className="w-4 h-4" /></button>
             </header>
             <div className="flex-1 overflow-auto p-5 space-y-3">

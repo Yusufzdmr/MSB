@@ -398,7 +398,7 @@ function EgitimPopup({ open, onClose, onSave, kimlikNo }: {
       <div className="relative bg-white rounded shadow-[0_20px_60px_rgba(0,0,0,0.35)] w-full max-w-3xl max-h-[92vh] flex flex-col">
         <header className="flex items-center gap-3 px-5 h-[52px] border-b flex-shrink-0" style={{ background: MSB.red, color: "#fff" }}>
           <GraduationCap className="w-4 h-4" />
-          <h2 className="text-[14px] font-extrabold uppercase tracking-wide">Yeni Eğitim Bilgisi Ekle</h2>
+          <h2 className="text-[14.5px] font-bold tracking-normal">Yeni Eğitim Bilgisi Ekle</h2>
           <button onClick={onClose} className="ml-auto text-white/85 hover:text-white p-1"><X className="w-4 h-4" /></button>
         </header>
         <div className="flex-1 overflow-auto p-5 space-y-4">
@@ -505,7 +505,7 @@ function EgitimPopup({ open, onClose, onSave, kimlikNo }: {
               )}
               {durum === "Mezun" && (
                 <div>
-                  <label className={lbl}>Bölüm Kodu <span className="text-[#888] normal-case">(ops.)</span></label>
+                  <label className={lbl}>Bölüm Kodu</label>
                   <input className={inp} value={bolumKodu} onChange={e => setBolumKodu(e.target.value)} placeholder="Örn: 0000" />
                 </div>
               )}
@@ -550,15 +550,15 @@ function EgitimPopup({ open, onClose, onSave, kimlikNo }: {
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-[#EEE] pt-4">
                 <div>
-                  <label className={lbl}>Diploma No <span className="text-[#888] normal-case">(ops.)</span></label>
+                  <label className={lbl}>Diploma No</label>
                   <input className={inp} value={diplomaNo} onChange={e => setDiplomaNo(e.target.value)} />
                 </div>
                 <div>
-                  <label className={lbl}>Başlangıç Tarihi <span className="text-[#888] normal-case">(ops.)</span></label>
+                  <label className={lbl}>Başlangıç Tarihi</label>
                   <input type="date" className={inp} value={baslangicTarihi} onChange={e => setBaslangicTarihi(e.target.value)} />
                 </div>
                 <div>
-                  <label className={lbl}>Mezuniyet Tarihi <span className="text-[#888] normal-case">(ops.)</span></label>
+                  <label className={lbl}>Mezuniyet Tarihi</label>
                   <input type="date" className={inp} value={mezuniyetTarihi} onChange={e => setMezuniyetTarihi(e.target.value)} disabled={durum === "Öğrenci"} />
                 </div>
                 <div>
@@ -813,7 +813,7 @@ function SinavPopup({ open, onClose, onSave }: {
       <div className="relative bg-white rounded shadow-[0_20px_60px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[92vh] flex flex-col">
         <header className="flex items-center gap-3 px-5 h-[52px] border-b flex-shrink-0" style={{ background: MSB.red, color: "#fff" }}>
           <ScanLine className="w-4 h-4" />
-          <h2 className="text-[14px] font-extrabold uppercase tracking-wide">Yeni Sınav Bilgisi Ekle</h2>
+          <h2 className="text-[14.5px] font-bold tracking-normal">Yeni Sınav Bilgisi Ekle</h2>
           <button onClick={onClose} className="ml-auto text-white/85 hover:text-white p-1"><X className="w-4 h-4" /></button>
         </header>
         <div className="flex-1 overflow-auto p-5 space-y-4">
@@ -1062,19 +1062,19 @@ function Adim5Adres({ p, onChange }: { p: BasvuruProfili; onChange: (patch: Part
           )}
         </div>
         <div>
-          <label className={lbl}>Köy / Kasaba <span className="text-[#888] normal-case">(ops.)</span></label>
+          <label className={lbl}>Köy / Kasaba</label>
           <input className={inp} value={a.koyKasaba ?? ""} onChange={e => set({ koyKasaba: e.target.value })} />
         </div>
         <div>
-          <label className={lbl}>Mahalle <span className="text-[#888] normal-case">(ops.)</span></label>
+          <label className={lbl}>Mahalle</label>
           <input className={inp} value={a.mahalle ?? ""} onChange={e => set({ mahalle: e.target.value })} />
         </div>
         <div>
-          <label className={lbl}>Cadde <span className="text-[#888] normal-case">(ops.)</span></label>
+          <label className={lbl}>Cadde</label>
           <input className={inp} value={a.cadde ?? ""} onChange={e => set({ cadde: e.target.value })} />
         </div>
         <div>
-          <label className={lbl}>Sokak <span className="text-[#888] normal-case">(ops.)</span></label>
+          <label className={lbl}>Sokak</label>
           <input className={inp} value={a.sokak ?? ""} onChange={e => set({ sokak: e.target.value })} />
         </div>
         <div>
@@ -1113,7 +1113,7 @@ function Adim6Iletisim({ p, onChange }: { p: BasvuruProfili; onChange: (patch: P
           <input className={inp} value={i.yakinTelefon1} onChange={e => set({ yakinTelefon1: e.target.value })} placeholder="0 xxx xxx xx xx" />
         </div>
         <div>
-          <label className={lbl}>Yakın Telefon-2 <span className="text-[#888] normal-case">(ops.)</span></label>
+          <label className={lbl}>Yakın Telefon-2</label>
           <input className={inp} value={i.yakinTelefon2 ?? ""} onChange={e => set({ yakinTelefon2: e.target.value })} />
         </div>
       </div>

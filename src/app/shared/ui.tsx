@@ -129,7 +129,7 @@ export function Modal({ open, onClose, title, children, size = "md", footer }: {
       <div className={`relative bg-white rounded-[4px] shadow-[0_20px_60px_rgba(0,0,0,0.35)] w-full ${w} max-h-[92vh] flex flex-col`}>
         <header className="flex items-center gap-3 px-5 h-[52px] border-b border-[#DDDDDD] flex-shrink-0" style={{ background: MSB.red, color: "#fff" }}>
           <span className="w-2 h-2 rounded-full bg-white/80" />
-          <h2 className="text-[14px] font-extrabold uppercase tracking-wide">{title}</h2>
+          <h2 className="text-[14.5px] font-bold tracking-normal">{title}</h2>
           <button onClick={onClose} className="ml-auto text-white/85 hover:text-white p-1" aria-label="Kapat">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           </button>

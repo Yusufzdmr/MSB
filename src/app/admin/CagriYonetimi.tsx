@@ -302,7 +302,7 @@ export default function CagriYonetimi() {
           <div className="bg-white rounded shadow-xl w-full max-w-md">
             <div className="px-5 h-[52px] border-b flex items-center gap-3" style={{ background: "#5E7F42", color: "#fff" }}>
               <Award className="w-4 h-4" />
-              <h2 className="text-[14px] font-extrabold uppercase tracking-wide">İtirazı Onayla — Puan Güncelle</h2>
+              <h2 className="text-[14.5px] font-bold tracking-normal">İtirazı Onayla — Puan Güncelle</h2>
             </div>
             <div className="p-5 space-y-3">
               <div className="text-[13px] text-[#333]">

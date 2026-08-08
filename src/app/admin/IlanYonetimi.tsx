@@ -292,6 +292,44 @@ export default function IlanYonetimi() {
               <input type="number" min={0} max={500} step={0.1} className={inputCls} value={editing.minPuan}
                 onChange={e => setEditing({ ...editing, minPuan: Number(e.target.value) })} />
             </Field>
+            <Field label="Ön Eleme: Min Sıralama" hint="Örn: ilk 50.000 sıralamayı geç">
+              <input type="number" min={0} className={inputCls} value={editing.kriterOnEleme?.minSiralama ?? ""}
+                onChange={e => setEditing({ ...editing, kriterOnEleme: { ...editing.kriterOnEleme, minSiralama: e.target.value ? Number(e.target.value) : undefined } })} />
+            </Field>
+            <Field label="Maksimum Tercih Adedi" hint="Aday kaç adet tercih yazabilir (Örn: 4)">
+              <input type="number" min={1} max={30} className={inputCls} value={editing.maxTercih ?? ""}
+                onChange={e => setEditing({ ...editing, maxTercih: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+
+            <div className="col-span-2 pb-1 border-b border-[#EEE] mb-1 mt-3">
+              <h4 className="text-[11.5px] font-bold text-[#A82232] uppercase tracking-widest">Yerleştirme Algoritması</h4>
+            </div>
+            <div className="col-span-2 space-y-2">
+              <label className="flex items-start gap-2.5 p-3 border border-[#DDD] rounded cursor-pointer hover:bg-[#FAFAFA]">
+                <input type="radio" name="algoritma" className="mt-1 accent-[#A82232]" checked={(editing.algoritma ?? "havuz") === "havuz"}
+                  onChange={() => setEditing({ ...editing, algoritma: "havuz" })} />
+                <div className="flex-1">
+                  <div className="text-[13px] font-bold text-[#333]">Seçenek A — Havuz / Puan Üstünlüğü</div>
+                  <div className="text-[11.5px] text-[#666] mt-0.5">
+                    Adaylar Nihai Puana (Ham × K_tercih) göre yüksekten düşüğe sıralanır. Puan üstünlüğü esas alınır. Şehit/Gazi eşitlik önceliği + K_tercih (1.05/1.02/1.00) uygulanır.
+                  </div>
+                </div>
+              </label>
+              <label className="flex items-start gap-2.5 p-3 border border-[#DDD] rounded cursor-pointer hover:bg-[#FAFAFA]">
+                <input type="radio" name="algoritma" className="mt-1 accent-[#A82232]" checked={editing.algoritma === "osym_iteratif"}
+                  onChange={() => setEditing({ ...editing, algoritma: "osym_iteratif" })} />
+                <div className="flex-1">
+                  <div className="text-[13px] font-bold text-[#333]">Seçenek B — ÖSYM Mantığı / Tercih Öncelikli İteratif</div>
+                  <div className="text-[11.5px] text-[#666] mt-0.5">
+                    <strong>Tur 1</strong>: Tüm adayların <strong>1. tercihleri</strong> puan sırasına göre yerleştirilir; dolan program dışındakiler <strong>2. tercihe</strong> gider.<br />
+                    <strong>Tur 2+</strong>: Yerleşememişler sırasıyla 2., 3., ... tercihlerine kaydırılır. Tercih sırası merkez alınır.
+                  </div>
+                </div>
+              </label>
+              <div className="text-[11px] text-[#888] italic">
+                ⓘ İki algoritmanın da Ham Puan formülü aynıdır: <strong>ÖSYM Sınav Puanı + Bonservis Puanı</strong>. Fark, yerleştirme mantığındadır.
+              </div>
+            </div>
 
             <Field label="Eğitim Seviyesi" required>
               <select className={selectCls} value={editing.egitim} onChange={e => setEditing({ ...editing, egitim: e.target.value as EgitimSeviyesi })}>

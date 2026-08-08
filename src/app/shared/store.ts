@@ -50,6 +50,13 @@ export type Ilan = {
   kriterler: string[];
   kilavuzAdi?: string;         // İlan kılavuz PDF adı (yeni)
   altBirimler?: AltBirim[];    // Alt birim kontenjanları (yeni)
+  // ─ Yerleştirme algoritması
+  algoritma?: "havuz" | "osym_iteratif";  // A: Puan üstünlüğü havuz | B: ÖSYM iteratif tercih öncelikli
+  maxTercih?: number;                     // Admin tercih edilebilecek maksimum adet (Örn: 4)
+  kriterOnEleme?: {                        // Sınav puan/sıralaması ön eleme kriteri
+    minSiralama?: number;                  // İlk N sıralama (Örn: ilk 50.000)
+    minPuan?: number;                      // Min puan (zaten var ama kriter olarak da)
+  };
   // ─ Şehit/Gazi kuralları
   sehitGaziTabanIndirimi?: number;   // Örn: 10 puan indirim (70 → 60)
   sehitGaziKotaYuzde?: number;       // Örn: 5 → %5 özel kontenjan
