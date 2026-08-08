@@ -173,8 +173,7 @@ function AyarlarPanel() {
       <div className="bg-white border border-[#E0E0E0] rounded-[4px] p-5">
         <h3 className="text-[15px] font-extrabold mb-4" style={{ color: MSB.red }}>Sistem Ayarları</h3>
         <p className="text-[13px] text-[#666] mb-4 leading-relaxed">
-          Demo amaçlı depolama <code className="bg-[#F5F5F5] px-1.5 py-0.5 rounded">localStorage</code> üzerinde tutulmaktadır. Production'da bu modülün
-          arka planı bir REST/GraphQL servisine geçirilecektir. Aşağıdaki buton tüm demo verisini sıfırlar.
+          Sistem veri istatistikleri aşağıda gösterilmektedir. Aşağıdaki buton sistemi başlangıç durumuna sıfırlar (dikkatli kullanınız).
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 text-[11.5px]">
           {[
@@ -193,10 +192,10 @@ function AyarlarPanel() {
             </div>
           ))}
         </div>
-        <button onClick={() => { if (confirm("Tüm demo verisi sıfırlanacak. Devam?")) actions.resetAll(); }}
+        <button onClick={() => { if (confirm("Tüm sistem verisi sıfırlanacak. Devam?")) actions.resetAll(); }}
           className="h-9 px-4 border rounded-[3px] text-[12.5px] font-semibold text-white"
           style={{ background: MSB.red, borderColor: MSB.redDark }}>
-          Demo Verisini Sıfırla
+          Sistemi Sıfırla
         </button>
       </div>
     </div>

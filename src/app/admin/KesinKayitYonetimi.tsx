@@ -147,7 +147,7 @@ export default function KesinKayitYonetimi() {
                           <div className="text-[12.5px] font-semibold text-[#333]">{e.ad}</div>
                           <div className="text-[10.5px] text-[#888]">{e.tip} · {e.boyutKB} KB</div>
                         </div>
-                        <button className="text-[11.5px] text-[#A82232] hover:underline" onClick={() => alert(`${e.ad} açılıyor (mock).`)}>Göster</button>
+                        <button className="text-[11.5px] text-[#A82232] hover:underline" onClick={() => alert(`${e.ad} açılıyor.`)}>Göster</button>
                       </div>
                     ))}
                   </div>

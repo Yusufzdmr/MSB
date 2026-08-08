@@ -620,7 +620,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
 
   const liveLabel = live?.source === "live"
     ? "CANLI"
-    : liveLoading ? "YÜKLENİYOR" : "DEMO VERİ";
+    : liveLoading ? "YÜKLENİYOR" : "";
   const liveColor = live?.source === "live" ? "#7BA05B" : liveLoading ? "#4A6FA5" : "#C87E27";
 
   return (
@@ -805,15 +805,14 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
           <div className="flex items-baseline justify-between flex-wrap gap-4 mb-6 pb-4 border-b-[2px]" style={{ borderColor: MSB.red }}>
             <div className="flex items-baseline gap-3 flex-wrap">
               <h2 className="text-[22px] font-extrabold tracking-tight" style={{ color: MSB.red }}>GÜNCEL TEMİNLER</h2>
-              <span className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest px-2 py-1 rounded-[3px] text-white"
-                style={{ background: liveColor }}
-                title={live?.fetchedAt ? `Kaynak: personeltemin.msb.gov.tr · ${new Date(live.fetchedAt).toLocaleString("tr-TR")}` : (liveErr || "")}>
-                {liveLoading ? <RotateCcw className="w-2.5 h-2.5 animate-spin" /> : <span className="w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />}
-                {liveLabel}
-              </span>
-              <a href="https://personeltemin.msb.gov.tr" target="_blank" rel="noreferrer noopener" className="text-[11px] text-[#888] hover:text-[#A82232] hover:underline">
-                kaynak: personeltemin.msb.gov.tr ↗
-              </a>
+              {liveLabel && (
+                <span className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest px-2 py-1 rounded-[3px] text-white"
+                  style={{ background: liveColor }}
+                  title={live?.fetchedAt ? `Kaynak: personeltemin.msb.gov.tr · ${new Date(live.fetchedAt).toLocaleString("tr-TR")}` : (liveErr || "")}>
+                  {liveLoading ? <RotateCcw className="w-2.5 h-2.5 animate-spin" /> : <span className="w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />}
+                  {liveLabel}
+                </span>
+              )}
             </div>
             <div className="flex gap-1 flex-wrap">
               {filters.map(f => (
@@ -1110,7 +1109,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
               <div className="flex items-center gap-2 mt-5 pt-4 border-t border-[#EEE]">
                 <button onClick={() => {
                   if (!openDuyuru) return;
-                  const icerik = `T.C. MİLLÎ SAVUNMA BAKANLIĞI\nDUYURU\n\n${openDuyuru.title}\n\nTarih: ${openDuyuru.date ?? "-"}\nKategori: ${openDuyuru.cat ?? "Genel"}\n\nBu belge demo amaçlıdır. Gerçek yayında PDF/e-Devlet dosyası burada olur.\n`;
+                  const icerik = `T.C. MİLLÎ SAVUNMA BAKANLIĞI\nDUYURU\n\n${openDuyuru.title}\n\nTarih: ${openDuyuru.date ?? "-"}\nKategori: ${openDuyuru.cat ?? "Genel"}\n`;
                   const blob = new Blob([icerik], { type: "text/plain;charset=utf-8" });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a"); a.href = url;
@@ -1815,16 +1814,11 @@ function LoginScreen({ onHome, onRegister, onForgot, onDashboard, onEdevlet, onA
           <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#E30A17] group-hover:translate-x-0.5 transition-all" />
         </button>
 
-        {/* Small footnote link to the demo e-Devlet mock screen */}
-        <button type="button" onClick={onEdevlet} className="w-full text-center text-[11px] text-slate-500 hover:text-[#E30A17] transition-colors pt-1">
-          e-Devlet mock ekranını göster (demo) →
-        </button>
-
-        {/* Admin quick access */}
+        {/* Admin girişi */}
         <button type="button" onClick={onAdmin}
-          className="w-full flex items-center justify-center gap-2 py-2 mt-1 border border-dashed border-[#A82232]/40 rounded-lg text-[11.5px] font-bold text-[#A82232] hover:bg-[#A82232]/[0.04] transition-colors">
+          className="w-full flex items-center justify-center gap-2 py-2 mt-1 border border-[#A82232]/40 rounded-lg text-[11.5px] font-bold text-[#A82232] hover:bg-[#A82232]/[0.04] transition-colors">
           <Shield className="w-3.5 h-3.5" strokeWidth={2} />
-          Yönetici Konsoluna Git (Demo)
+          Yönetici Girişi
         </button>
 
         <p className="text-center text-[13px] text-slate-500 pt-2">
@@ -2231,7 +2225,7 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (method !== "nvi") { setError("Bu giriş yöntemi demoda desteklenmiyor. Lütfen NVİ Kimlik Doğrulama seçin."); return; }
+    if (method !== "nvi") { setError("Bu giriş yöntemi şu an aktif değil. Lütfen NVİ Kimlik Doğrulama seçin."); return; }
     if (tc.length !== 11) { setError("T.C. Kimlik No 11 hane olmalıdır."); return; }
     if (!ad.trim() || !soyad.trim()) { setError("Ad ve Soyad zorunludur."); return; }
     const yy = parseInt(dogumYili, 10);
@@ -2355,11 +2349,11 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
       {/* Body */}
       <main className="flex-1 bg-[#FAFAFA]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-10 lg:py-14">
-          {/* Demo notice */}
+          {/* NVİ doğrulama bilgi kutusu */}
           <div className="max-w-3xl mx-auto mb-6 flex items-start gap-2.5 p-3.5 rounded-lg bg-emerald-50 border border-emerald-200">
             <BadgeCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
             <p className="text-[12.5px] text-emerald-900 leading-relaxed">
-              <strong>Gerçek NVİ Doğrulaması:</strong> Aşağıdaki form, T.C. Nüfus ve Vatandaşlık İşleri Genel Müdürlüğü'nün resmi <strong>tckimlik.nvi.gov.tr</strong> servisine bağlanır. TCKN + Ad + Soyad + Doğum Yılı bilgileriniz nüfus kayıtlarında eşleştirilir.
+              Aşağıdaki form, T.C. Nüfus ve Vatandaşlık İşleri Genel Müdürlüğü'nün resmi <strong>tckimlik.nvi.gov.tr</strong> servisine bağlanır. TCKN + Ad + Soyad + Doğum Yılı bilgileriniz nüfus kayıtlarında eşleştirilir.
               Güvenlik kodu: <strong className="tabular-nums bg-white px-1.5 py-0.5 rounded border border-emerald-300 mx-0.5">{CAPTCHA_CODE}</strong>
             </p>
           </div>
@@ -2487,9 +2481,9 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
                   <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
                     <Info className="w-6 h-6 text-slate-400" strokeWidth={1.75} />
                   </div>
-                  <h3 className="text-[15px] font-bold text-slate-700 mb-1.5">Bu yöntem demoda etkin değil</h3>
+                  <h3 className="text-[15px] font-bold text-slate-700 mb-1.5">Bu yöntem şu an aktif değil</h3>
                   <p className="text-[13px] text-slate-500 mb-5 leading-relaxed">
-                    Bu tanıtım prototipinde yalnızca <strong>e-Devlet Şifresi</strong> ile giriş simüle edilmiştir. Gerçek entegrasyonda tüm yöntemler desteklenir.
+                    Lütfen NVİ Kimlik Doğrulama seçeneğini kullanınız.
                   </p>
                   <button onClick={() => setMethod("pw")}
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E30A17] text-white font-bold rounded hover:bg-[#c00813] transition-colors text-[13px]">

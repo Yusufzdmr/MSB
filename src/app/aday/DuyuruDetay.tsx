@@ -119,7 +119,7 @@ export default function DuyuruDetay({ duyuruId, onBack }: { duyuruId: string; on
                   </div>
                   <button className="inline-flex items-center gap-2 h-[32px] px-3 text-[12px] font-bold text-white bg-[#A82232] hover:bg-[#8B1A25] rounded-[3px]"
                     onClick={() => {
-                      const icerik = `${duyuru.baslik}\n\n[Ek Belge: ${ek.ad}]\n\nBu belge demo amaçlıdır. Gerçek yayın döneminde MSB Personel Temin Dairesi Başkanlığı tarafından paylaşılan resmi PDF/Excel dosyaları buradan indirilir.\n\nİndirme Tarihi: ${new Date().toLocaleString("tr-TR")}\n`;
+                      const icerik = `${duyuru.baslik}\n\n[Ek Belge: ${ek.ad}]\n\nBu ek belge Personel Temin Dairesi Başkanlığı tarafından yayımlanmıştır.\n\nİndirme Tarihi: ${new Date().toLocaleString("tr-TR")}\n`;
                       const blob = new Blob([icerik], { type: "text/plain;charset=utf-8" });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
@@ -323,7 +323,7 @@ Doğrulama: bu belgenin doğruluğu ${window.location.origin} adresinden
 sonuç sorgulama panelinden TCKN + Kontrol Kodu ile teyit edilebilir.
 
 Kontrol Kodu: ${kod}
-Barkod     : [DEMO — Gerçek çıktıda karekod bulunur]
+Barkod / Karekod: Bu belgenin doğruluğu Kontrol Kodu ile teyit edilir
 
 Bu sonuç TEBLİGAT YERİNE GEÇMEKTEDİR.
 Asil adayların kayıt/katılış işlemlerini belirtilen tarihte

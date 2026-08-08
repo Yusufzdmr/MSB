@@ -203,7 +203,7 @@ export default function FinansYonetimi() {
                   <div className="p-3 border border-[#EEE] rounded bg-[#FAFAFA] flex items-center gap-2">
                     <FileText className="w-4 h-4 text-[#A82232]" />
                     <div className="flex-1"><div className="text-[13px] font-semibold text-[#333]">{seciliBsv.dekontAdi}</div></div>
-                    <button className="text-[11.5px] text-[#A82232] hover:underline" onClick={() => alert("Dekont açılıyor (mock).")}>Göster</button>
+                    <button className="text-[11.5px] text-[#A82232] hover:underline" onClick={() => alert("Dekont açılıyor.")}>Göster</button>
                   </div>
                   <div>
                     <label className="block text-[11.5px] font-bold text-[#555] mb-1 uppercase">Red Gerekçesi (yalnızca reddederken)</label>

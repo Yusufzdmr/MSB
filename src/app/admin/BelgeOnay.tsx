@@ -206,8 +206,7 @@ function BelgePreview({ belge, onApprove, onReject, onClose }: {
           <span className="ml-2 text-[10px] text-[#888] font-mono">{belge.ad}</span>
         </div>
         <ImageIcon className="w-16 h-16 text-[#CCC] mb-2 mt-4" strokeWidth={1.2} />
-        <div className="text-[11.5px] text-[#888] italic">Belge önizleme (demo)</div>
-        <div className="text-[10px] text-[#AAA] mt-1">Production'da PDF.js/PDFium tarafından render edilir</div>
+        <div className="text-[11.5px] text-[#888] italic">Belge önizleme</div>
       </div>
 
       {belge.ocrAlanlar && (
