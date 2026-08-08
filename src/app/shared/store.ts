@@ -1337,6 +1337,66 @@ export const actions = {
   ekTercihKapat: (ilanId: string) =>
     set(s => { s.ilanlar = s.ilanlar.map(i => i.id === ilanId ? { ...i, ekTercihAktif: false } : i); return s; }),
 
+  // ─ Ek Tercih Simülasyonu — spec: ana yerleştirmede yerleşememiş + kesin kayıt yapmamış adaylar için
+  //   boş kontenjanları doldurur. K_ek_tercih: 1. tercih 1.05, 2+ = 1.00. Taban puan opsiyonel esnetme.
+  ekTercihSimulasyonuCalistir: (ilanId: string, opts?: { tabanIndirimi?: number }) => {
+    const ilan = state.ilanlar.find(i => i.id === ilanId);
+    if (!ilan) return null;
+
+    // Boş kontenjan hesabı: orijinal kontenjan - kesin kaydı ONAYLANMIŞ asil sayısı
+    const kayitliAsilSayisi = state.basvurular.filter(
+      b => b.ilanId === ilanId && b.durum === "yerlestirildi" && b.kesinKayitDurumu === "onaylandi"
+    ).length;
+    const bosKontenjan = Math.max(0, ilan.kontenjan - kayitliAsilSayisi);
+    if (bosKontenjan === 0) return { id: "", ilanId, tarih: now(), yontem: "otomatik" as const, yapan: "system", yayinlandi: false, sonuclar: [] };
+
+    // Uygun havuz: yerleşememişler + yedekte olup asile yükselmemişler + kesin kayıt yaptırmamış olanlar
+    // KAYIT YAPTIRANLAR HARIÇ (spec)
+    const uygun = state.basvurular.filter(b =>
+      b.ilanId === ilanId
+      && (b.durum === "yerlestirilmedi" || b.durum === "yedek")
+      && b.kesinKayitDurumu !== "onaylandi"
+    );
+
+    const sehitGaziMi = (adayId: string) => !!state.profiller.find(p => p.adayId === adayId)?.sehitGazi.varMi;
+    const indirim = opts?.tabanIndirimi ?? 0;
+    const tabanEk = (adayId: string) => {
+      const base = Math.max(0, ilan.minPuan - indirim);
+      return sehitGaziMi(adayId) ? Math.max(0, base - (ilan.sehitGaziTabanIndirimi ?? 0)) : base;
+    };
+    const tabaniGecen = uygun.filter(b => b.puan >= tabanEk(b.adayId));
+
+    const tercihSirasi = (adayId: string) => state.tercihler.find(t => t.adayId === adayId && t.ilanId === ilanId)?.sira ?? 999;
+    // K_ek_tercih: 1. ek tercih 1.05, 2+ = 1.00
+    const kEk = (sira: number) => sira === 1 ? 1.05 : 1.00;
+    const hamPuan = (b: Basvuru) => b.puan + (b.bonservisPuani ?? 0);
+    const nihaiEk = (b: Basvuru) => Math.round(hamPuan(b) * kEk(tercihSirasi(b.adayId)) * 100) / 100;
+
+    const siralanan = tabaniGecen.sort((a, b) => {
+      const na = nihaiEk(a), nb = nihaiEk(b);
+      if (nb !== na) return nb - na;
+      const sga = sehitGaziMi(a.adayId) ? 1 : 0;
+      const sgb = sehitGaziMi(b.adayId) ? 1 : 0;
+      if (sga !== sgb) return sgb - sga;
+      return tercihSirasi(a.adayId) - tercihSirasi(b.adayId);
+    });
+
+    const yerlesenler = siralanan.slice(0, bosKontenjan);
+    const yerlestirme: Yerlestirme = {
+      id: genId("YRL-EK"), ilanId, tarih: now(), yontem: "otomatik", yapan: "ek-tercih-system", yayinlandi: false,
+      sonuclar: [
+        ...yerlesenler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: nihaiEk(b), durum: "yerlesti" as const })),
+        // Kalanlar yerleşemedi statüsünde
+        ...siralanan.slice(bosKontenjan).map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: nihaiEk(b), durum: "yerlesmedi" as const })),
+      ],
+    };
+    set(s => {
+      s.yerlestirmeler = [yerlestirme, ...s.yerlestirmeler.filter(y => !(y.ilanId === ilanId && !y.yayinlandi))];
+      return s;
+    });
+    return yerlestirme;
+  },
+
   // ─ Çoklu sınav arşiv (sene geçince önceki yıl belgeleri arşivlenir)
   sinavlarArsivle: (yeniYil: number) =>
     set(s => {

@@ -75,6 +75,15 @@ export default function IlanYonetimi() {
     actions.ekTercihBaslat(id, bitis);
     alert(`Ek tercih dönemi başlatıldı. Bitiş: ${bitis}. Kalan kontenjanlar sıralamadaki adaylara yeniden açıldı.`);
   };
+  const ekTercihSimulasyonFn = (id: string) => {
+    const indirimStr = prompt("Ek tercih için taban puan İNDİRİMİ (0 = aynı taban)? Örn: 10 → taban 70 → 60", "0");
+    if (indirimStr === null) return;
+    const indirim = Number(indirimStr) || 0;
+    const y = actions.ekTercihSimulasyonuCalistir(id, { tabanIndirimi: indirim });
+    if (!y || y.sonuclar.length === 0) return alert("Boş kontenjan kalmadı ya da ek tercih için uygun aday bulunamadı.");
+    const yerlesen = y.sonuclar.filter(r => r.durum === "yerlesti").length;
+    alert(`Ek tercih simülasyonu tamamlandı.\n\n• Boş kontenjan doldurulan: ${yerlesen} aday\n• Değerlendirilen: ${y.sonuclar.length}\n\nSonuçları yayınlamak için "Sonuçları Yayınla" tuşunu kullanın.`);
+  };
   const kesinKayitBaslatFn = (id: string) => {
     const bitis = prompt("Kesin kayıt bitiş tarihi (YYYY-MM-DD)?", new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10));
     if (!bitis) return;
@@ -143,6 +152,8 @@ export default function IlanYonetimi() {
                 {r.durum === "kapali" && <Btn size="sm" variant="success" onClick={() => yayinlaSonuc(r.id)}><Award className="w-3 h-3" /> Sonuçları Yayınla</Btn>}
                 {r.durum === "yerlestirildi" && !r.kesinKayitAktif && <Btn size="sm" variant="light" onClick={() => kesinKayitBaslatFn(r.id)}>Kesin Kayıt Başlat</Btn>}
                 {r.durum === "yerlestirildi" && !r.ekTercihAktif && <Btn size="sm" variant="light" onClick={() => ekTercihBaslatFn(r.id)}>Ek Tercih Aç</Btn>}
+                {r.durum === "yerlestirildi" && r.ekTercihAktif && <Btn size="sm" variant="ghost" onClick={() => ekTercihSimulasyonFn(r.id)}><Play className="w-3 h-3" /> Ek Tercih Simülasyonu</Btn>}
+                {r.durum === "yerlestirildi" && r.ekTercihAktif && <Btn size="sm" variant="ghost" onClick={() => { actions.ekTercihKapat(r.id); alert("Ek tercih dönemi kapatıldı."); }}>Ek Tercihi Kapat</Btn>}
                 <Btn size="sm" variant="ghost" onClick={() => openEdit(r)}><Edit3 className="w-3 h-3" /></Btn>
                 <Btn size="sm" variant="danger" onClick={() => sil(r)}><Trash2 className="w-3 h-3" /></Btn>
               </div>
