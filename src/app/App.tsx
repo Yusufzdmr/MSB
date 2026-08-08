@@ -716,7 +716,9 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
               </div>
               <div className="bg-[#FBECEE] divide-y divide-[#E8B5BB]">
                 {featured.slice(0, 4).map((f, i) => (
-                  <button key={i} onClick={() => onNav("login")}
+                  <button key={i}
+                    onClick={() => { onDetail(); scrollToId("guncel-teminler"); }}
+                    title="İlan detayına git"
                     className="w-full text-left px-5 py-3.5 hover:bg-[#F5D6DA] transition-colors group">
                     <div className="text-[13px] font-bold text-[#333] leading-snug mb-1 line-clamp-2 group-hover:text-[#A82232]">{f.title}</div>
                     <div className="flex items-center gap-3 text-[11px] text-[#666]">
@@ -724,7 +726,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
                       <span>·</span>
                       <span>{f.date}</span>
                       <span className="ml-auto inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wider text-[#A82232]">
-                        Başvur <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
+                        Detaya Git <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
                       </span>
                     </div>
                   </button>
@@ -742,20 +744,31 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
                 <span className="text-[10.5px] font-bold text-white/85 uppercase tracking-widest">Sonuç & Bilgi</span>
               </div>
               <div className="bg-white divide-y divide-[#EEE]">
-                {duyurular.slice(0, 4).map((d, i) => (
-                  <button key={i} onClick={() => onNav("announcements")}
-                    className="w-full text-left px-5 py-3 hover:bg-[#FAFAFA] transition-colors flex items-start gap-3">
-                    <div className="flex flex-col items-center justify-center min-w-[46px] py-1 bg-[#F5F5F5] border border-[#DDD] rounded flex-shrink-0">
-                      <div className="text-[9.5px] font-bold uppercase text-[#888] tracking-wider">{d.ay}</div>
-                      <div className="text-[16px] font-black text-[#333] leading-none tabular-nums">{d.day}</div>
-                      <div className="text-[9px] font-semibold text-[#888] italic">{d.gun}</div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12.5px] font-bold text-[#333] leading-snug line-clamp-2 mb-1">{d.title}</div>
-                      <div className="text-[10.5px] text-[#888] uppercase tracking-wider font-semibold">{d.cat}</div>
-                    </div>
-                  </button>
-                ))}
+                {duyurular.slice(0, 4).map((d, i) => {
+                  // Sonuç/yerleştirme içeren duyuru → direkt DuyuruDetay (SONUÇ SORGULA'lı)
+                  // Aksi halde tüm duyurular listesi
+                  const t = d.title.toLowerCase();
+                  const gitSonuc = onDuyuru && (t.includes("yerleştirme") || t.includes("sonuç") || t.includes("çağrı durumu"));
+                  return (
+                    <button key={i}
+                      onClick={() => gitSonuc ? onDuyuru!("D-001") : onNav("announcements")}
+                      title={gitSonuc ? "Sonuç sorgulama sayfasına git" : "Tüm duyurulara git"}
+                      className="w-full text-left px-5 py-3 hover:bg-[#FAFAFA] transition-colors flex items-start gap-3">
+                      <div className="flex flex-col items-center justify-center min-w-[46px] py-1 bg-[#F5F5F5] border border-[#DDD] rounded flex-shrink-0">
+                        <div className="text-[9.5px] font-bold uppercase text-[#888] tracking-wider">{d.ay}</div>
+                        <div className="text-[16px] font-black text-[#333] leading-none tabular-nums">{d.day}</div>
+                        <div className="text-[9px] font-semibold text-[#888] italic">{d.gun}</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12.5px] font-bold text-[#333] leading-snug line-clamp-2 mb-1">{d.title}</div>
+                        <div className="flex items-center gap-2 text-[10.5px]">
+                          <span className="text-[#888] uppercase tracking-wider font-semibold">{d.cat}</span>
+                          {gitSonuc && <span className="ml-auto inline-flex items-center gap-1 font-bold uppercase tracking-wider text-[#4A6FA5]">Sorgula <ChevronRight className="w-3 h-3" strokeWidth={2.5} /></span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
                 {duyurular.length === 0 && (
                   <div className="px-5 py-6 text-center text-[12.5px] text-[#888] italic">Duyuru bulunmuyor.</div>
                 )}
