@@ -2440,41 +2440,10 @@ function EDevletScreen({ onCancel, onSuccess }: { onCancel: () => void; onSucces
                     </div>
                   </div>
 
-                  {/* Real e-Devlet redirect (opens giris.turkiye.gov.tr in new tab) */}
+                  {/* Bilgi notu — gerçek e-Devlet SSO neden yok? */}
                   <div className="pt-4 mt-2 border-t border-slate-200">
-                    <div className="flex items-start gap-2.5 p-3 rounded bg-emerald-50 border border-emerald-200 mb-3">
-                      <BadgeCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
-                      <div>
-                        <p className="text-[12.5px] text-emerald-900 font-bold leading-snug">Gerçek e-Devlet doğrulamasını kullanın</p>
-                        <p className="text-[11.5px] text-emerald-800/85 leading-snug mt-0.5">
-                          Aşağıdaki bağlantı sizi <strong>giris.turkiye.gov.tr</strong> resmi e-Devlet oturum açma sayfasına götürür. Doğrulama sonrası bu sekmeye geri döneceksiniz.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const redirect = encodeURIComponent(window.location.origin + "/?edevlet_callback=1");
-                        const url = `https://giris.turkiye.gov.tr/OturumAc/GirisYap/index.html?ReturnUrl=${redirect}`;
-                        const w = window.open(url, "_blank", "noopener,noreferrer");
-                        toast("e-Devlet giriş sayfası açıldı", { kind: "info", sub: "giris.turkiye.gov.tr yeni sekmede açıldı" });
-                        // Simulate post-login callback after 12s (client can come back and see dashboard)
-                        setTimeout(() => {
-                          if (w && !w.closed) {
-                            toast("e-Devlet doğrulaması tamamlandığında bu sekmeye dönün", { kind: "info" });
-                          } else {
-                            toast("Kimlik doğrulaması tamamlandı", { kind: "success", sub: "Aday paneline yönlendiriliyorsunuz" });
-                            setTimeout(onSuccess, 900);
-                          }
-                        }, 6000);
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 bg-white border-2 border-[#E30A17] text-[#E30A17] font-bold rounded hover:bg-[#FFF5F6] transition-colors text-[13px]">
-                      <div className="w-5 h-5 rounded bg-[#E30A17] flex items-center justify-center text-white text-[10px] font-black italic">e</div>
-                      giris.turkiye.gov.tr'ye git ve gerçek e-Devlet ile doğrula
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </button>
-                    <p className="text-[10.5px] text-slate-500 mt-2 text-center leading-snug">
-                      Not: Tam OAuth entegrasyonu için MSB'nin turkiye.gov.tr üzerinde tescil edilmiş bir <code className="bg-slate-100 px-1 rounded">client_id</code> alması gerekir (yalnızca resmi kurumlara verilir).
+                    <p className="text-[11px] text-slate-500 text-center leading-snug">
+                      Not: <strong>giris.turkiye.gov.tr</strong> üzerinden tam SSO entegrasyonu için Türkiye Cumhurbaşkanlığı Dijital Dönüşüm Ofisi tarafından servise <code className="bg-slate-100 px-1 rounded text-[10.5px]">client_id</code> tanımlanması gerekir (yalnızca kurumsal servisler). Bu ekran, aynı doğrulamayı sağlayan NVİ resmi <strong>tckimlik.nvi.gov.tr</strong> servisini kullanır.
                     </p>
                   </div>
                 </form>
@@ -3083,12 +3052,12 @@ export default function App() {
       setToasts(t => [...t, item]);
       setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3800);
     };
-    // Handle e-Devlet callback (?edevlet_callback=1) — user returned from turkiye.gov.tr
+    // ?edevlet_callback=1 gelirse yalnızca NVİ doğrulama ekranına yönlendir (fake oturum açma yok)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("edevlet_callback") === "1") {
-        setScreen("dashboard");
-        setTimeout(() => toastFn?.("e-Devlet doğrulaması başarılı", { kind: "success", sub: "Aday paneline hoş geldiniz" }), 300);
+        setScreen("edevlet");
+        setTimeout(() => toastFn?.("Lütfen NVİ Kimlik Doğrulama formunu doldurun", { kind: "info", sub: "TCKN + Ad + Soyad + Doğum Yılı gerekli" }), 300);
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
