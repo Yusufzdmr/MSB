@@ -321,7 +321,7 @@ function Header({ activeScreen, onNav }: { activeScreen: Screen; onNav: (s: Scre
                 );
               })}
             </div>
-            <button onClick={() => { toast("e-Devlet doğrulaması başarılı", { kind: "success", sub: "Aday paneline yönlendiriliyorsunuz" }); setTimeout(() => onNav("dashboard"), 500); }}
+            <button onClick={() => onNav("edevlet")}
               className="hidden md:inline-flex items-center gap-2 px-5 py-2 text-[13px] font-bold text-white bg-[#4A4A4A] hover:bg-[#333] rounded-[3px] shadow-sm transition-colors uppercase tracking-wide">
               <div className="w-5 h-5 rounded bg-[#E30A17] flex items-center justify-center text-white text-[10px] font-black italic">e</div>
               e-Devlet ile Giriş
@@ -361,7 +361,7 @@ function Header({ activeScreen, onNav }: { activeScreen: Screen; onNav: (s: Scre
                 {n.label}
               </button>
             ))}
-            <button onClick={() => { setOpen(false); toast("e-Devlet doğrulaması başarılı", { kind: "success", sub: "Aday paneline yönlendiriliyorsunuz" }); setTimeout(() => onNav("dashboard"), 500); }}
+            <button onClick={() => { setOpen(false); onNav("edevlet"); }}
               className="mx-4 mt-2 mb-1 inline-flex items-center gap-2 px-4 py-2 text-[13px] font-bold text-white bg-[#4A4A4A] rounded-[3px] uppercase">
               <div className="w-5 h-5 rounded bg-[#E30A17] flex items-center justify-center text-white text-[10px] font-black italic">e</div>
               e-Devlet ile Giriş
@@ -655,7 +655,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
                 <GraduationCap className="w-4 h-4" strokeWidth={2} />
                 Öğrenci Temini
               </button>
-              <button onClick={() => { toast("e-Devlet doğrulaması başarılı", { kind: "success", sub: "Aday paneline yönlendiriliyorsunuz" }); setTimeout(() => onNav("dashboard"), 500); }}
+              <button onClick={() => onNav("edevlet")}
                 className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold text-white bg-[#4A4A4A] hover:bg-[#333] rounded-[3px] tracking-wide uppercase transition-colors">
                 <div className="w-4.5 h-4.5 rounded bg-[#E30A17] flex items-center justify-center text-white text-[9px] font-black italic">e</div>
                 e-Devlet ile Giriş
@@ -1773,7 +1773,7 @@ function LoginScreen({ onHome, onRegister, onForgot, onDashboard, onEdevlet, onA
           <span className="flex-1 h-px bg-slate-200" />
         </div>
 
-        <button type="button" onClick={() => { toast("e-Devlet doğrulaması başarılı", { kind: "success", sub: "Aday paneline yönlendiriliyorsunuz" }); setTimeout(onDashboard, 500); }}
+        <button type="button" onClick={onEdevlet}
           className="w-full flex items-center justify-center gap-2.5 py-3 bg-white border-2 border-[#E30A17]/25 text-slate-800 font-bold rounded-xl hover:bg-[#E30A17]/[0.03] hover:border-[#E30A17]/50 transition-all text-[14px] group">
           <div className="w-6 h-6 rounded bg-[#E30A17] flex items-center justify-center text-white text-[11px] font-black italic tracking-tighter shadow-[0_1px_3px_rgba(227,10,23,0.35)]">e</div>
           <span className="text-[#E30A17]">e-Devlet</span> <span className="text-slate-700">ile Giriş Yap</span>
