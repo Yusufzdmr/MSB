@@ -592,31 +592,34 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
       {/* ═════════════ HERO — Atatürk portrait + kurumsal mesaj ═════════════ */}
       <section className="border-b border-[#DDDDDD]">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-10 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10">
-          {/* Atatürk plaque */}
+          {/* Atatürk plaque — resmi portre (Wikimedia Commons, public domain) */}
           <div className="mx-auto lg:mx-0">
             <div className="relative w-[260px] bg-[#F5F5F5] border border-[#DDDDDD] p-2 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
-              <div className="relative aspect-[3/4] bg-gradient-to-b from-[#2C2C2C] via-[#3D3D3D] to-[#1F1F1F] overflow-hidden">
-                {/* Stylized portrait silhouette */}
-                <svg viewBox="0 0 200 260" className="w-full h-full" aria-hidden>
-                  <defs>
-                    <radialGradient id="ata-vig" cx="50%" cy="35%" r="60%">
-                      <stop offset="0%" stopColor="#D4C4A0" stopOpacity="0.9" />
-                      <stop offset="60%" stopColor="#8B7A5A" stopOpacity="0.35" />
-                      <stop offset="100%" stopColor="#1F1F1F" stopOpacity="0" />
-                    </radialGradient>
-                  </defs>
-                  <rect width="200" height="260" fill="url(#ata-vig)" />
-                  {/* Shoulders */}
-                  <path d="M20 260 Q100 155 180 260 Z" fill="#1F1F1F" opacity="0.85" />
-                  {/* Head */}
-                  <ellipse cx="100" cy="120" rx="52" ry="65" fill="#4A3F2C" opacity="0.65" />
-                  <ellipse cx="100" cy="115" rx="45" ry="58" fill="#3B3323" opacity="0.75" />
-                  {/* Hair suggestion */}
-                  <path d="M55 90 Q100 55 145 90 Q145 70 100 60 Q55 70 55 90 Z" fill="#1A1610" opacity="0.85" />
-                  {/* Collar V */}
-                  <path d="M60 260 L100 210 L140 260 Z" fill="#2A2418" />
-                </svg>
-                <div className="absolute top-3 left-3 right-3 flex justify-between items-center text-[9px] text-white/50 tracking-[0.2em] font-bold">
+              <div className="relative aspect-[3/4] bg-[#1F1F1F] overflow-hidden">
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Atat%C3%BCrk1930s.jpg/500px-Atat%C3%BCrk1930s.jpg"
+                  alt="Gazi Mustafa Kemal Atatürk — Türkiye Cumhuriyeti Kurucusu"
+                  className="w-full h-full object-cover object-top"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // Wikimedia erişilmezse yerel/fallback SVG göster
+                    const el = e.currentTarget as HTMLImageElement;
+                    if (!el.dataset.fallback) {
+                      el.dataset.fallback = "1";
+                      el.src = "data:image/svg+xml;utf8," + encodeURIComponent(
+                        `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 260'>
+                          <rect width='200' height='260' fill='#2C2C2C'/>
+                          <ellipse cx='100' cy='115' rx='48' ry='60' fill='#4A3F2C'/>
+                          <path d='M20 260 Q100 160 180 260 Z' fill='#1A1A1A'/>
+                          <text x='100' y='250' font-family='serif' font-size='9' fill='#888' text-anchor='middle'>Görsel yüklenemedi</text>
+                        </svg>`
+                      );
+                    }
+                  }}
+                />
+                {/* Yıl bantı */}
+                <div className="absolute top-2 left-2 right-2 flex justify-between items-center text-[10px] text-white/85 tracking-[0.2em] font-bold px-1.5 py-0.5 bg-black/40 rounded backdrop-blur-sm">
                   <span>1881</span>
                   <span>—</span>
                   <span>1938</span>
