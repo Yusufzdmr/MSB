@@ -781,11 +781,26 @@ function autoKesinKayitSureAsimi(s: State): State {
   return { ...s, basvurular: guncelBasvurular, mesajlar: [...yeniMesajlar, ...s.mesajlar], yerlestirmeler: guncelYerlestirmeler };
 }
 
-// Periyodik: bitiş tarihi geçen ilanları "kapali" + kesin kayıt süresi geçen asilleri "sure_asimi" (60sn'de bir)
+// Sene geçince önceki yıla ait sınavları otomatik "arşivlendi" işaretle
+function autoSinavArsivle(s: State): State {
+  const yy = new Date().getFullYear();
+  let degisti = false;
+  const yeniProfiller = s.profiller.map(p => {
+    const yeniSinavlar = p.sinavlar.map(sn => {
+      if (sn.sinavYili < yy && !sn.arsivlendi) { degisti = true; return { ...sn, arsivlendi: true }; }
+      return sn;
+    });
+    return degisti ? { ...p, sinavlar: yeniSinavlar } : p;
+  });
+  return degisti ? { ...s, profiller: yeniProfiller } : s;
+}
+
+// Periyodik: bitiş tarihi geçen ilanlar + kesin kayıt süresi geçen asiller + sınav arşiv (60sn'de bir)
 if (typeof window !== "undefined") {
   setInterval(() => {
     let yeni = autoExpireIlanlar(state);
     yeni = autoKesinKayitSureAsimi(yeni);
+    yeni = autoSinavArsivle(yeni);
     if (yeni !== state) {
       state = yeni;
       notify();

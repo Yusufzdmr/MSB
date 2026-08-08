@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { MSB } from "../shared/theme";
 import { actions, useStore, type Ilan } from "../shared/store";
+import { guncelSinavVarMi, BasvuruEngellemePopup } from "./SinavGuncellemeUyari";
 
 const btnLgt = "inline-flex items-center gap-1.5 h-[28px] px-2.5 text-[11.5px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCCCCC] rounded-[3px]";
 
@@ -54,6 +55,9 @@ export default function TercihEkrani({ adayId }: { adayId: string }) {
   const [acikGrup, setAcikGrup] = useState<Record<string, boolean>>({});
   const [detay, setDetay] = useState<AltProgram | null>(null);
   const [ekleOnay, setEkleOnay] = useState<AltProgram | null>(null);
+  const [engelPopup, setEngelPopup] = useState<{ ilan?: string } | null>(null);
+  const storeAll = useStore();
+  const guncelVar = guncelSinavVarMi(adayId, storeAll);
 
   // Kayıtlı tercihleri programa göre çözümle
   const kayitliCozumlu = useMemo(() => {
@@ -185,7 +189,12 @@ export default function TercihEkrani({ adayId }: { adayId: string }) {
                                   Süresi Doldu
                                 </button>
                               ) : (
-                                <button onClick={() => setEkleOnay(p)} className="inline-flex items-center gap-1 h-[26px] px-2.5 text-[11px] font-bold text-white bg-[#5E7F42] hover:bg-[#4A6634] rounded-[3px]">
+                                <button
+                                  onClick={() => {
+                                    if (!guncelVar) { setEngelPopup({ ilan: p.ad }); return; }
+                                    setEkleOnay(p);
+                                  }}
+                                  className="inline-flex items-center gap-1 h-[26px] px-2.5 text-[11px] font-bold text-white bg-[#5E7F42] hover:bg-[#4A6634] rounded-[3px]">
                                   <Check className="w-3 h-3" /> Tercih Yap
                                 </button>
                               )}
@@ -323,6 +332,14 @@ export default function TercihEkrani({ adayId }: { adayId: string }) {
           </div>
         </div>
       )}
+
+      {/* Başvuru engelleme pop-up — güncel yıl sınavı olmayan aday Tercih Yap'a bastığında */}
+      <BasvuruEngellemePopup
+        open={!!engelPopup}
+        onClose={() => setEngelPopup(null)}
+        onGoSinav={() => alert("Bilgilerim → Sınav Bilgileri sekmesinden güncel yılın sınav belgenizi yükleyiniz.")}
+        ilanBaslik={engelPopup?.ilan}
+      />
     </>
   );
 }

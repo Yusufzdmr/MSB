@@ -24,6 +24,7 @@ import KesinKayit from "./aday/KesinKayit";
 import Odeme from "./aday/Odeme";
 import BasvuruDetayTimeline from "./aday/BasvuruDetayTimeline";
 import IlanTakvimi from "./aday/IlanTakvimi";
+import { SinavGuncellemeBanner, ZorunluSinavGuncellemeModal } from "./aday/SinavGuncellemeUyari";
 import { actions as storeActions, useStore as useSharedStore } from "./shared/store";
 
 // Turkish flag & institutional palette
@@ -2686,6 +2687,11 @@ function DashboardScreen({ onLogout, onOcr, onSonuc }: { onLogout: () => void; o
 
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", color: MSB.ink }}>
+      {/* Sene geçişi zorunlu güncelleme modalı (tam ekran) */}
+      <ZorunluSinavGuncellemeModal adayId="18878273464" onGoSinav={() => { setView("bilgilerim"); setWizardStep(3); }} />
+      {/* Panel içi turuncu uyarı bandı */}
+      <SinavGuncellemeBanner adayId="18878273464" />
+
       {/* ═════════════ TOP HEADER (white, MSB emblem + search + date + user) ═════════════ */}
       <header className="h-[62px] bg-white border-b border-[#DDDDDD] flex items-center px-3 sm:px-5 sticky top-0 z-40">
         {/* Left: emblem + wordmark */}
