@@ -244,7 +244,182 @@ Admin, duyuru içeriğini standart bir metin kutusu yerine gelişmiş bir toolba
 
 ---
 
-## 9. Ortak Notlar
+## 9. Puan Hesaplama Formülü
+
+### Puan Bileşenleri
+1. **ÖSYM Sınav Puanı**: Doğrulanan merkezi sınav puanı
+2. **Bonservis / Sertifika Puanı**: Admin onaylı mesleki yetkinlik belgelerinden gelen sabit ek puan (Örn: +3)
+3. **Tercih Sıralama Ağırlığı (K_tercih)**:
+   - 1. Tercih: **1.05** katsayısı (%5 avantaj)
+   - 2. Tercih: **1.02** katsayısı (%2 avantaj)
+   - 3. Tercih ve sonrası: **1.00** (standart)
+
+### Formül
+```
+Ham Başarı Puanı = ÖSYM Puanı + Bonservis Puanı
+Nihai Tercih Puanı = Ham Başarı Puanı × K_tercih
+```
+
+### Örnek
+Aday A ve B'nin ÖSYM puanı 300, bonservisi +3 → Ham puan 303.
+- A programı 1. sıra yazdıysa: `303 × 1.05 = 318.15`
+- B aynı programı 3. sıra yazdıysa: `303 × 1.00 = 303.00`
+
+---
+
+## 10. Şehit / Gazi Yakınları Özel Kuralları
+
+1. **Baraj Esnetme**: Genel taban (70) → şehit/gazi (60). Puana ekleme yok, sadece baraja giriş kolaylaştırılır.
+2. **Eşitlik Öncelik**: Kontenjan sınırında iki aday eşit puanlıysa şehit/gazi yakını üste alınır (kura yok).
+3. **Opsiyonel Özel Kontenjan**: Admin ilan açarken %X kota tanımlarsa önce burada yarışırlar; giremeyenler genel havuza döner.
+
+---
+
+## 11. Yerleştirme Algoritması (Boş Kontenjan Yönetimi)
+
+1. **Sıralama Havuzu**: Adaylar Nihai Tercih Puanına göre yüksekten düşüğe
+2. **Gönüllülük Esaslı Asil Yerleştirme**: En yüksek puanlıdan başla → 1. tercih boşsa asil, doluysa 2. tercihe bak
+3. **Boş Kontenjan Doldurma**: Az tercih edilen programda boş varsa, taban puanı geçmiş adaylar arasından o programı tercih edenler kendi içinde sıralanır — puan düşük olsa da yerleştirilir
+4. **Yedek Liste**: Asil dolduktan sonra puan sırasına göre 1. Yedek, 2. Yedek…
+
+---
+
+## 12. Ek Tercih Dönemi
+
+**Tetiklenme**: Asil/yedek kayıt süresi bittikten sonra boş kalan kontenjanlar (feragat / süre aşımı / yedekten dolmayan).
+
+**Admin**: "Ek Tercih Dönemini Başlat" → boş kadrolar listelenir + 3 günlük ek tercih takvimi açılır.
+
+**Kimler ek tercih yapabilir?**: Ana yerleştirmede yerleşmemiş, taban puanı geçmiş adaylar.
+
+---
+
+## 13. Kesin Kayıt Süreci
+
+### Aday Akışı
+1. **Kesin Kayıt Sekmesi Aktifleşir** — asil kazananın panelinde "Kesin Kayıt İşlemleri"
+2. **Bildirim** — SMS/E-posta ile tebrik + kayıt tarih aralığı
+3. **Dijital Evrak Yükleme** — Diploma, kimlik, adli sicil, askerlik, vb.
+4. **OCR ile Doğrulama** — Yaş / mezuniyet / taban şart uyumu otomatik kontrol
+5. **Taahhütname Onayı** — "Verdiğim bilgiler doğrudur, hakkımdan feragat etmiyorum" checkbox
+6. **Kesin Kayıt Başvurusunu Tamamla** → admin onay kuyruğuna düşer
+
+### Admin Akışı
+- "Kesin Kayıt Onay Kuyruğu" — evrak inceleme
+- **Onay** → statü "Kayıtlı Öğrenci/Personel"
+- **Red - Eksik Evrak** → adaya düzeltme süresi
+
+### Barkodlu PDF Çıktı
+Kayıt onaylanınca aday "Kesin Kayıt Kabul Belgesi" resmi barkodlu + karekodlu PDF indirir.
+
+### Süre Aşımı / Feragat
+Aday 15 gün içinde tamamlamazsa → otomatik "Süre Aşımı / Hak Kaybı" → yedek çağrılır.
+
+---
+
+## 14. Kesin Kayıttan Feragat
+
+1. **"Kesin Kayıt Hakkından Feragat Et" Butonu**
+2. **Güvenlik Onay Ekranı** — "geri alınamaz"
+3. **Dijital Feragat Dilekçesi** — barkodlu PDF üretilir + dijital imza
+4. **Statü Güncelleme** — "Haklarından Feragat Etti"
+5. **Yedek Zinciri Tetiklenir** — 1. Yedek anında çağrılır, 3 günlük kayıt süresi
+6. **Süre Aşımı = Otomatik Feragat** — 15 gün sonunda yüklemezse hak düşer
+
+---
+
+## 15. Admin — Aday Yönetimi (Manuel + Excel)
+
+### Tekil (Manuel) Ekleme
+"Aday Yönetimi → Yeni Aday Ekle" → TCKN, Ad, Soyad, İletişim, ÖSYM Puanı, İlan/Program.
+- Sistem mükerrer TCKN kontrolü yapar
+- Otomatik geçici şifre üretilir
+
+### Excel Toplu Yükleme
+1. **Şablon İndir** — .XLSX/.CSV (TCKN, Ad, Soyad, Puan, Şht_Gazi_Durumu)
+2. **Doldur ve Yükle**
+3. **Validasyon** — eksik TCKN, hane hatası, mükerrer TCKN → kırmızı raporlanır
+4. **Kısmi Aktarım** — "3 hatalı, 197 başarılı" seçeneği
+5. **Tek Tuşla Aktar** — veritabanına işlenir
+
+---
+
+## 16. Çoklu Sınav Arşivi & Sene Geçişi
+
+### Aday Panel
+- **"Sınav Sonuçlarım / Arşiv"** — geçmiş tüm sınavlar saklanır
+- **Geçerlilik Yılı** — her ilan hangi yıl sınavını kabul ettiğini belirtir
+- **Sene Geçişi** — eski sınavlar otomatik "Arşivlendi / Süresi Doldu" statüsüne alınır
+
+### Uyarı Mekanizmaları
+- **Turuncu/Kırmızı Banner** — "Süresi geçen sınav belgeniz bulunuyor. Son gün: [Tarih]"
+- **Başvuru Engelleme** — güncel yıl belgesi yoksa pop-up: "Bu ilan için geçerli [Yıl] sınav sonucunuz bulunmamaktadır"
+
+---
+
+## 17. İtiraz / Şikayet (Çağrı Aç Entegrasyonu)
+
+Ayrı sayfa yok — mevcut "Çağrı Aç" üzerinden çalışır. Yeni kategoriler:
+
+- **Puan / Sıralama İtirazı**
+- **Bonservis / Belge İtirazı / Reddedilme**
+- **Şehit/Gazi Yakınlığı / Baraj Durumu İtirazı**
+- **Genel Yerleştirme / Diğer Şikayetler**
+
+### Aday
+- Otomatik veri bağlantısı (TCKN, puan, başvuru admin tarafında görünür)
+- Kanıt belgesi ekle
+
+### Admin
+- **Etiketleme** — kırmızı (puan), sarı (belge) vb.
+- **Split-Screen** — sol: aday talebi, sağ: puan/belge/başvuru geçmişi
+- **Çözüm Butonları**:
+  - "Yanıtla ve Kapat"
+  - "İtirazı Onayla ve Puanı Güncelle" (simülasyon havuzunu tetikler)
+  - "Reddet ve Gerekçe Bildir"
+
+**Süre Kısıtı**: Sonuç ilanından sonraki **72 saat** içinde açılabilir.
+
+---
+
+## 18. Ödeme Sistemi (IBAN + Dekont)
+
+### Admin — İlan Sihirbazı "Mali ve Ödeme Ayarları" Sekmesi
+- **Ücret Durumu**: Aktif / Pasif
+- **Ücret Tutarı**: TL cinsinden (Örn: 500 TL)
+- **Ödeme Zamanı**:
+  - **A. Önce Tercih, Sonra Ödeme (Önerilen)**: Tercih süresi bittikten sonra ücret talep edilir
+  - **B. Önce Ödeme, Sonra Tercih**: Dekont onaylanmadan tercih ekranına geçilemez
+
+### Aday — Ödeme Ekranı
+1. **Ödeme Bilgileri** — Banka, IBAN, Alıcı Adı
+2. **Benzersiz Referans Kodu** (Örn: TRK-2026-9482) — açıklama kısmına yazılması zorunlu
+3. **Dekont Yükleme** — PDF/PNG
+4. **Ödeme Bildirimi Gönder** → statü "Ödeme İnceleniyor"
+
+### Admin — Doğrulama
+- Dekont + referans kod eşleşmesi kontrolü
+- Onay → aday statüsü "Ödeme Alındı"
+- Red → aday bilgilendirilir, süre içinde düzeltir
+
+### Süre Aşımı
+Ödeme yapmayan adayın tercihi otomatik iptal (Geçersiz Başvuru).
+
+### Yedek Ücret Politikası (Kritik Finansal Denge)
+**"Yedekler Asil Olana Kadar Ücret Ödemez"**
+- Simülasyon sonrası yedek olan aday **başlangıçta ücret ödemez** (yerleşemezse mağdur olmasın)
+- Sırası asil listeye yükseldiğinde sistem bildirim gönderir: "Sıranız asil listeye gelmiştir. Yerleştirme hakkını kazanmak için [X] gün içinde tercih ücretinizi yatırınız."
+- Ücret yatırılırsa hak kesinleşir, kayıt sürecine geçer
+- Yatırılmazsa sıra sıradaki yedeğe geçer
+
+### Admin — Finans / İade ve Mahsup Yönetimi
+- **Açıkta Kalanlar Listesi**: Yedekte kalıp yerleşemeyenler otomatik listelenir. Ödeme yapmış olanlar "İade Edilecek" etiketi alır.
+- **Toplu İade Listesi**: Tek tıkla "İade Edilecek IBAN Listesi (.XLSX)" indirilir → muhasebeye verilir
+- **Admin Onayı**: İade tamamlandıktan sonra statü "Ücret İade Edildi" olur, dosya arşive kaldırılır
+
+---
+
+## 20. Ortak Notlar
 
 - **Renk kodlaması**: Sol tarafta kırmızı/kiremit (aksiyon), sağ tarafta gri (bilgilendirme)
 - **Kilit noktalar**: TCKN, Doğum Tarihi, Cinsiyet, OCR ile çekilen puanlar değiştirilemez

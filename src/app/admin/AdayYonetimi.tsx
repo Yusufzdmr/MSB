@@ -1,9 +1,9 @@
 // Aday Yönetimi — arama, filtre, tablo, detay drawer (özlük + belgeler + başvurular + tercihler).
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, Filter, X, FileText, ClipboardList, ListChecks, MessageSquare, GraduationCap, MapPin, Phone, Mail } from "lucide-react";
+import { Search, Filter, X, FileText, ClipboardList, ListChecks, MessageSquare, GraduationCap, MapPin, Phone, Mail, Plus, Upload, Download, AlertCircle } from "lucide-react";
 import { useStore, actions, type Aday, type EgitimSeviyesi } from "../shared/store";
-import { DataTable, Pill, Btn, trTarih, maskTC, Field, textareaCls } from "../shared/ui";
+import { DataTable, Pill, Btn, Modal, trTarih, maskTC, Field, inputCls, selectCls, textareaCls } from "../shared/ui";
 import { MSB } from "../shared/theme";
 
 export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
@@ -12,6 +12,52 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
   const [filtreEgt, setFiltreEgt] = useState<EgitimSeviyesi | "">("");
   const [siralama, setSiralama] = useState<"puan" | "kayit" | "ad">("puan");
   const [detay, setDetay] = useState<Aday | null>(null);
+  const [manuelAcik, setManuelAcik] = useState(false);
+  const [tumTest, setTumTest] = useState<{ kabul: number; red: number; redDetay: { row: any; sebep: string }[] } | null>(null);
+  const [topluAcik, setTopluAcik] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [yeniAday, setYeniAday] = useState<Partial<Aday>>({ egitim: "Lise", cinsiyet: "Erkek", ehliyet: [], sinavPuani: 0 });
+
+  const manuelKaydet = () => {
+    if (!yeniAday.id || !/^\d{11}$/.test(yeniAday.id)) return alert("Geçerli 11 haneli TCKN girin.");
+    if (!yeniAday.ad || !yeniAday.soyad) return alert("Ad ve Soyad zorunlu.");
+    const r = actions.adayManuelEkle({
+      id: yeniAday.id, ad: yeniAday.ad.toLocaleUpperCase("tr"), soyad: yeniAday.soyad.toLocaleUpperCase("tr"),
+      eposta: yeniAday.eposta ?? "", telefon: yeniAday.telefon ?? "",
+      dogumTarihi: yeniAday.dogumTarihi ?? "2000-01-01",
+      cinsiyet: (yeniAday.cinsiyet ?? "Erkek") as "Erkek" | "Kadın" | "Farketmez",
+      sehir: yeniAday.sehir ?? "—",
+      egitim: (yeniAday.egitim ?? "Lise") as EgitimSeviyesi,
+      sinavPuani: Number(yeniAday.sinavPuani ?? 0),
+      kvkkOnayi: false,
+    });
+    if (r.ok) { alert(`Aday oluşturuldu. Geçici şifre: ${Math.random().toString(36).slice(2, 8).toUpperCase()}`); setManuelAcik(false); setYeniAday({ egitim: "Lise", cinsiyet: "Erkek", ehliyet: [], sinavPuani: 0 }); }
+    else alert(r.error);
+  };
+
+  const sablonIndir = () => {
+    const csv = "TCKN;Ad;Soyad;EPosta;Telefon;SinavPuani;SehitGaziMi\n" +
+      "12345678901;ÖRNEK;ADAY;ornek@ex.com;05551112233;72.5;false\n" +
+      "12345678902;İKİNCİ;ÖRNEK;ornek2@ex.com;05551112244;85.1;true\n";
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "aday-toplu-sablon.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const csvIsle = () => {
+    const satirlar = csvText.split(/\r?\n/).filter(x => x.trim());
+    if (satirlar.length < 2) return alert("Boş dosya.");
+    const [, ...veri] = satirlar;
+    const rows = veri.map(l => l.split(";")).filter(c => c.length >= 6).map(c => ({
+      id: c[0].trim(), ad: c[1].trim(), soyad: c[2].trim(),
+      eposta: c[3].trim(), telefon: c[4].trim(),
+      sinavPuani: Number(c[5].trim() || "0"),
+      sehitGaziMi: (c[6] ?? "").trim().toLowerCase() === "true",
+    }));
+    const sonuc = actions.adaylarToplu(rows);
+    setTumTest(sonuc);
+  };
 
   useEffect(() => { if (qGlobal) setQ(qGlobal); }, [qGlobal]);
 
@@ -54,10 +100,91 @@ export default function AdayYonetimi({ q: qGlobal = "" }: { q?: string }) {
           <option value="kayit">Kayıt tarihi (yeni)</option>
           <option value="ad">Ada göre (A→Z)</option>
         </select>
-        <div className="ml-auto text-[11.5px] font-semibold text-[#666] tabular-nums">
-          {rows.length} aday
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[11.5px] font-semibold text-[#666] tabular-nums">{rows.length} aday</span>
+          <Btn variant="light" size="sm" onClick={() => setTopluAcik(true)}><Upload className="w-3 h-3" /> Excel Toplu Yükle</Btn>
+          <Btn size="sm" onClick={() => setManuelAcik(true)}><Plus className="w-3 h-3" /> Yeni Aday</Btn>
         </div>
       </div>
+
+      {/* Manuel aday modal */}
+      <Modal open={manuelAcik} onClose={() => setManuelAcik(false)} size="md"
+        title="Yeni Aday Ekle (Manuel)"
+        footer={<><Btn variant="ghost" onClick={() => setManuelAcik(false)}>İptal</Btn><Btn onClick={manuelKaydet}>Kaydet & Şifre Oluştur</Btn></>}>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 p-3 rounded border" style={{ background: MSB.warnBg, borderColor: MSB.warnBrd, color: MSB.orange }}>
+            <div className="flex items-start gap-2 text-[12px]"><AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>Bu yöntem yalnızca özel durumlarda (mahkeme kararı, sistem dışı istisna, veri düzeltme) kullanılmalıdır. Sistem mükerrer TCKN kontrolü yapar ve otomatik geçici şifre üretir.</div></div>
+          </div>
+          <Field label="TCKN" required><input className={inputCls} maxLength={11} value={yeniAday.id ?? ""} onChange={e => setYeniAday({ ...yeniAday, id: e.target.value.replace(/\D/g, "") })} /></Field>
+          <Field label="Sınav Puanı" required><input type="number" step={0.1} className={inputCls} value={yeniAday.sinavPuani ?? 0} onChange={e => setYeniAday({ ...yeniAday, sinavPuani: Number(e.target.value) })} /></Field>
+          <Field label="Ad" required><input className={inputCls} value={yeniAday.ad ?? ""} onChange={e => setYeniAday({ ...yeniAday, ad: e.target.value })} /></Field>
+          <Field label="Soyad" required><input className={inputCls} value={yeniAday.soyad ?? ""} onChange={e => setYeniAday({ ...yeniAday, soyad: e.target.value })} /></Field>
+          <Field label="E-posta"><input type="email" className={inputCls} value={yeniAday.eposta ?? ""} onChange={e => setYeniAday({ ...yeniAday, eposta: e.target.value })} /></Field>
+          <Field label="Telefon"><input className={inputCls} value={yeniAday.telefon ?? ""} onChange={e => setYeniAday({ ...yeniAday, telefon: e.target.value })} /></Field>
+          <Field label="Doğum Tarihi"><input type="date" className={inputCls} value={yeniAday.dogumTarihi ?? ""} onChange={e => setYeniAday({ ...yeniAday, dogumTarihi: e.target.value })} /></Field>
+          <Field label="Cinsiyet"><select className={selectCls} value={yeniAday.cinsiyet ?? "Erkek"} onChange={e => setYeniAday({ ...yeniAday, cinsiyet: e.target.value as "Erkek" | "Kadın" })}><option>Erkek</option><option>Kadın</option></select></Field>
+          <Field label="Şehir"><input className={inputCls} value={yeniAday.sehir ?? ""} onChange={e => setYeniAday({ ...yeniAday, sehir: e.target.value })} /></Field>
+          <Field label="Eğitim"><select className={selectCls} value={yeniAday.egitim ?? "Lise"} onChange={e => setYeniAday({ ...yeniAday, egitim: e.target.value as EgitimSeviyesi })}>
+            <option>Lise</option><option>Ön Lisans</option><option>Lisans</option><option>Yüksek Lisans</option><option>Doktora</option>
+          </select></Field>
+        </div>
+      </Modal>
+
+      {/* Excel toplu modal */}
+      <Modal open={topluAcik} onClose={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); }} size="lg"
+        title="Excel / CSV ile Toplu Aday Yükleme"
+        footer={<>
+          <Btn variant="ghost" onClick={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); }}>Kapat</Btn>
+          {!tumTest && <Btn onClick={csvIsle} disabled={!csvText.trim()}>İçeri Aktar (Validasyon)</Btn>}
+          {tumTest && <Btn variant="success" onClick={() => { setTopluAcik(false); setTumTest(null); setCsvText(""); }}>Tamam</Btn>}
+        </>}>
+        <div className="space-y-3">
+          <div className="p-3 rounded border" style={{ background: MSB.infoBg, borderColor: MSB.infoBrd, color: MSB.infoText }}>
+            <div className="text-[12.5px]">
+              <strong>1)</strong> Şablonu indirin. <strong>2)</strong> Excel'de doldurun ve <strong>.CSV</strong> olarak dışa aktarın.
+              <strong>3)</strong> Dosyayı açıp içeriği yapıştırın veya doğrudan yükleyin. Sistem TCKN doğrulama + mükerrer kontrolü yapar.
+              <div className="mt-1.5"><strong>Sütunlar</strong>: TCKN;Ad;Soyad;EPosta;Telefon;SinavPuani;SehitGaziMi</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Btn variant="light" onClick={sablonIndir}><Download className="w-3.5 h-3.5" /> Şablon .CSV İndir</Btn>
+            <label className="inline-flex items-center gap-1.5 h-[32px] px-3.5 text-[12.5px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCC] rounded cursor-pointer">
+              <Upload className="w-3.5 h-3.5" /> Dosya Seç
+              <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => {
+                const f = e.target.files?.[0]; if (!f) return;
+                const r = new FileReader(); r.onload = () => setCsvText(String(r.result)); r.readAsText(f, "utf-8");
+              }} />
+            </label>
+          </div>
+          <textarea className="w-full min-h-[220px] px-3 py-2 text-[11.5px] font-mono bg-[#FAFAFA] border border-[#CCC] rounded focus:outline-none focus:border-[#A82232]"
+            placeholder="TCKN;Ad;Soyad;EPosta;Telefon;SinavPuani;SehitGaziMi&#10;12345678901;ÖRNEK;ADAY;ornek@ex.com;05551112233;72.5;false"
+            value={csvText} onChange={e => setCsvText(e.target.value)} />
+
+          {tumTest && (
+            <div className="mt-3 border border-[#DDD] rounded overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F5F5F5] border-b flex items-center justify-between">
+                <div className="text-[12.5px] font-bold">
+                  <span className="text-[#5E7F42]">{tumTest.kabul} kayıt başarıyla aktarıldı</span>
+                  {tumTest.red > 0 && <span className="text-[#A82232] ml-3">{tumTest.red} kayıt reddedildi</span>}
+                </div>
+              </div>
+              {tumTest.red > 0 && (
+                <table className="w-full text-[11.5px]">
+                  <thead><tr className="bg-[#FBECEE] text-[#A82232]"><th className="px-3 py-1.5 text-left">TCKN</th><th className="px-3 py-1.5 text-left">Ad Soyad</th><th className="px-3 py-1.5 text-left">Sebep</th></tr></thead>
+                  <tbody>{tumTest.redDetay.map((r, i) => (
+                    <tr key={i} className={i % 2 === 0 ? "" : "bg-[#FAFAFA]"}>
+                      <td className="px-3 py-1.5 tabular-nums">{r.row.id}</td>
+                      <td className="px-3 py-1.5">{r.row.ad} {r.row.soyad}</td>
+                      <td className="px-3 py-1.5 text-[#A82232]">{r.sebep}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       <DataTable<Aday>
         onRowClick={setDetay}

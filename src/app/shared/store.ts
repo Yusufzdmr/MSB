@@ -18,6 +18,10 @@ export type Cinsiyet = "Erkek" | "Kadın" | "Farketmez";
 export type IlanDurum = "taslak" | "yayin" | "kapali" | "yerlestirildi";
 
 export type AltBirim = { ad: string; kontenjanAsil: number; kontenjanYedek: number };
+
+// ─── Ödeme kuralı ─────────────────────────────────────────────────────────────
+export type OdemeKurali = "yok" | "once_tercih_sonra_odeme" | "once_odeme_sonra_tercih";
+
 export type Ilan = {
   id: string;
   baslik: string;
@@ -46,6 +50,23 @@ export type Ilan = {
   kriterler: string[];
   kilavuzAdi?: string;         // İlan kılavuz PDF adı (yeni)
   altBirimler?: AltBirim[];    // Alt birim kontenjanları (yeni)
+  // ─ Şehit/Gazi kuralları
+  sehitGaziTabanIndirimi?: number;   // Örn: 10 puan indirim (70 → 60)
+  sehitGaziKotaYuzde?: number;       // Örn: 5 → %5 özel kontenjan
+  // ─ Sınav geçerlilik yılı
+  sinavGecerlilikYili?: number;
+  // ─ Ödeme
+  odemeKurali?: OdemeKurali;
+  ucretTutari?: number;              // TL
+  banka?: { ad: string; iban: string; alici: string };
+  // ─ Ek tercih dönemi
+  ekTercihAktif?: boolean;
+  ekTercihBaslangic?: string;
+  ekTercihBitis?: string;
+  // ─ Kesin kayıt dönemi
+  kesinKayitAktif?: boolean;
+  kesinKayitBaslangic?: string;
+  kesinKayitBitis?: string;
 };
 
 export type BelgeTipi =
@@ -103,13 +124,29 @@ export type Basvuru = {
   ilanId: string;
   basvuruTarihi: string;
   durum: "hazirlaniyor" | "gonderildi" | "onaylandi" | "reddedildi" | "yerlestirildi" | "yerlestirilmedi" | "belge_onay_bekliyor" | "yedek";
-  puan: number;
+  puan: number;                  // ham puan (ÖSYM + bonservis) — nihai puan yerleştirmede hesaplanır
+  bonservisPuani?: number;       // admin onaylı ek puan
+  nihaiPuan?: number;            // ham × K_tercih (yerleştirmede hesaplanır)
+  tercihSirasi?: number;         // adayın bu ilan için yazdığı tercih sırası (1,2,3…)
   redGerekce?: string;
   yerlestirmeSirasi?: number;
-  adminGerekce?: string;       // Rich text — admin tarafından yazılan gerekçe
-  tebligatBelgesi?: string;    // Ek PDF adı (opsiyonel)
-  gonderildi?: boolean;        // Adaya bildirim yayımlandı mı?
+  yedekSirasi?: number;          // örn 5. yedek
+  adminGerekce?: string;
+  tebligatBelgesi?: string;
+  gonderildi?: boolean;
   gonderilmeTarihi?: string;
+  // ─ Ödeme
+  odemeDurumu?: "beklemiyor" | "bekleniyor" | "inceleniyor" | "alindi" | "iade_edilecek" | "iade_edildi" | "iptal";
+  dekontAdi?: string;
+  referansKodu?: string;
+  odemeTarihi?: string;
+  // ─ Kesin kayıt
+  kesinKayitDurumu?: "aktif_degil" | "beklemede" | "inceleniyor" | "onaylandi" | "reddedildi" | "feragat" | "sure_asimi";
+  kesinKayitEvraklar?: { ad: string; boyutKB: number; tip: string }[];
+  taahhutOnayi?: boolean;
+  kesinKayitOnayTarihi?: string;
+  kesinKayitRedNedeni?: string;
+  kayitBelgesiPdf?: string;
 };
 
 export type Tercih = {
@@ -168,6 +205,7 @@ export type Yerlestirme = {
     tercihSirasi: number;
     puan: number;
     durum: "yerlesti" | "yedek" | "yerlesmedi";
+    yedekSirasi?: number;
   }[];
 };
 
@@ -249,17 +287,17 @@ export type SinavKaydi = {
   sinavYili: number;
   sonucKodu: string;
   belgeAdi: string;
-  // Sınav türüne göre okunan / seçilen bilgiler
-  kategori?: string;      // KPSS P1/P2/P3 vb.
-  altKategori?: string;   // P10, P48 vb.
-  alan?: string;          // SAY, SÖZ, EA
-  dil?: string;           // YDT için
+  kategori?: string;
+  altKategori?: string;
+  alan?: string;
+  dil?: string;
   puan?: number;
   yuzdelikDilim?: number;
   siralama?: number;
-  seviye?: string;        // YDS: A/B/C/D/E
+  seviye?: string;
   onayDurumu: "beklemede" | "onaylandi" | "reddedildi";
   onayNotu?: string;
+  arsivlendi?: boolean;   // sene geçtiği için otomatik arşive alındı
 };
 
 export type AdresBilgi = {
@@ -308,9 +346,19 @@ export type CagriKategori =
   | "Belge ve Evraklar Hakkında"
   | "Teknik ve Hesap Sorunları"
   | "Sonuç ve Çağrı Durumu"
+  | "Puan / Sıralama İtirazı"
+  | "Bonservis / Belge İtirazı / Reddedilme"
+  | "Şehit/Gazi Yakınlığı / Baraj İtirazı"
+  | "Genel Yerleştirme / Diğer Şikayetler"
   | "Diğer / Genel Bilgi Talepleri"
   | "Öneri"
   | "Görüş";
+export const ITIRAZ_KATEGORILERI: CagriKategori[] = [
+  "Puan / Sıralama İtirazı",
+  "Bonservis / Belge İtirazı / Reddedilme",
+  "Şehit/Gazi Yakınlığı / Baraj İtirazı",
+  "Genel Yerleştirme / Diğer Şikayetler",
+];
 
 export type CagriDurum = "acik" | "islemde" | "yanitlandi" | "kapali";
 
@@ -876,51 +924,77 @@ export const actions = {
   mesajOkundu: (id: string) =>
     set(s => { s.mesajlar = s.mesajlar.map(m => m.id === id ? { ...m, okundu: true } : m); return s; }),
 
-  // ─ Yerleştirme motoru
-  // Algoritma: her ilana başvuran adaylar puana göre büyükten küçüğe sıralanır.
-  // Tercih sırası eşitliğinde daha yüksek puanlı kazanır. Her aday sadece bir yere yerleşir.
+  // ─ Yerleştirme motoru (yeni formül: Ham × K_tercih + Şehit/Gazi öncelik)
+  // Ham = ÖSYM puan + Bonservis puanı
+  // K_tercih: 1. tercih=1.05, 2. tercih=1.02, 3+=1.00
+  // Şehit/Gazi: taban indirimi + eşitlikte öncelik
   yerlestirmeCalistir: (ilanId: string, yontem: "otomatik" | "manuel", yapan: string) => {
     const ilan = state.ilanlar.find(i => i.id === ilanId);
     if (!ilan) return null;
 
-    // İlan'a başvuran + onaylı adaylar
-    const basvurular = state.basvurular
-      .filter(b => b.ilanId === ilanId && (b.durum === "onaylandi" || b.durum === "gonderildi"))
-      .filter(b => b.puan >= ilan.minPuan);
+    // Şehit/gazi mi?
+    const sehitGaziMi = (adayId: string) => !!state.profiller.find(p => p.adayId === adayId)?.sehitGazi.varMi;
 
-    // Zaten başka bir ilana yerleşmiş adayları ele
+    // Taban puan (şehit/gazi için indirimli)
+    const tabanIcin = (adayId: string) =>
+      sehitGaziMi(adayId) ? Math.max(0, ilan.minPuan - (ilan.sehitGaziTabanIndirimi ?? 0)) : ilan.minPuan;
+
+    const basvurular = state.basvurular
+      .filter(b => b.ilanId === ilanId && (b.durum === "onaylandi" || b.durum === "gonderildi" || b.durum === "belge_onay_bekliyor"))
+      .filter(b => b.puan >= tabanIcin(b.adayId));
+
     const zatenYerlesenler = new Set(
       state.yerlestirmeler
         .filter(y => y.yayinlandi)
         .flatMap(y => y.sonuclar.filter(r => r.durum === "yerlesti").map(r => r.adayId))
     );
 
-    // Adayın bu ilan için tercih sırası (yoksa çok büyük değer)
     const tercihSirasi = (adayId: string) => {
       const t = state.tercihler.find(x => x.adayId === adayId && x.ilanId === ilanId);
       return t?.sira ?? 999;
     };
 
+    // K_tercih katsayısı
+    const kTercih = (sira: number) => sira === 1 ? 1.05 : sira === 2 ? 1.02 : 1.00;
+
+    // Ham puan (ÖSYM + bonservis)
+    const hamPuan = (b: Basvuru) => b.puan + (b.bonservisPuani ?? 0);
+    const nihaiPuan = (b: Basvuru) => Math.round(hamPuan(b) * kTercih(tercihSirasi(b.adayId)) * 100) / 100;
+
+    // Sırala: önce nihai puan (büyükten küçüğe), eşitse şehit/gazi öncelik, sonra tercih sırası
     const siralanan = basvurular
       .filter(b => !zatenYerlesenler.has(b.adayId))
       .sort((a, b) => {
-        const ta = tercihSirasi(a.adayId);
-        const tb = tercihSirasi(b.adayId);
-        if (ta !== tb) return ta - tb;
-        return b.puan - a.puan;
+        const na = nihaiPuan(a), nb = nihaiPuan(b);
+        if (nb !== na) return nb - na;
+        const sga = sehitGaziMi(a.adayId) ? 1 : 0;
+        const sgb = sehitGaziMi(b.adayId) ? 1 : 0;
+        if (sga !== sgb) return sgb - sga;
+        return tercihSirasi(a.adayId) - tercihSirasi(b.adayId);
       });
 
-    const yerlesenler = siralanan.slice(0, ilan.kontenjan);
-    const yedekSayisi = Math.min(Math.ceil(ilan.kontenjan * 0.2), siralanan.length - yerlesenler.length);
-    const yedekler = siralanan.slice(ilan.kontenjan, ilan.kontenjan + yedekSayisi);
-    const yerlesmeyenler = siralanan.slice(ilan.kontenjan + yedekSayisi);
+    // Şehit/Gazi özel kontenjan (opsiyonel)
+    const ozelKota = ilan.sehitGaziKotaYuzde ? Math.floor(ilan.kontenjan * ilan.sehitGaziKotaYuzde / 100) : 0;
+    let yerlesenler: typeof siralanan = [];
+    if (ozelKota > 0) {
+      const sgAdayları = siralanan.filter(b => sehitGaziMi(b.adayId)).slice(0, ozelKota);
+      const genelHavuz = siralanan.filter(b => !sgAdayları.includes(b));
+      yerlesenler = [...sgAdayları, ...genelHavuz.slice(0, ilan.kontenjan - sgAdayları.length)];
+    } else {
+      yerlesenler = siralanan.slice(0, ilan.kontenjan);
+    }
+
+    const yedekMax = ilan.kontenjanYedek ?? Math.ceil(ilan.kontenjan * 0.2);
+    const kalanlar = siralanan.filter(b => !yerlesenler.includes(b));
+    const yedekler = kalanlar.slice(0, yedekMax);
+    const yerlesmeyenler = kalanlar.slice(yedekMax);
 
     const yerlestirme: Yerlestirme = {
       id: genId("YRL"), ilanId, tarih: now(), yontem, yapan, yayinlandi: false,
       sonuclar: [
-        ...yerlesenler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: b.puan, durum: "yerlesti" as const })),
-        ...yedekler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: b.puan, durum: "yedek" as const })),
-        ...yerlesmeyenler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: b.puan, durum: "yerlesmedi" as const })),
+        ...yerlesenler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: nihaiPuan(b), durum: "yerlesti" as const })),
+        ...yedekler.map((b, i) => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: nihaiPuan(b), durum: "yedek" as const, yedekSirasi: i + 1 })),
+        ...yerlesmeyenler.map(b => ({ adayId: b.adayId, tercihSirasi: tercihSirasi(b.adayId), puan: nihaiPuan(b), durum: "yerlesmedi" as const })),
       ],
     };
 
@@ -1061,9 +1135,185 @@ export const actions = {
       return s;
     }),
 
+  // ─ Ödeme (aday dekont yükleme + admin onay/red)
+  odemeBildir: (basvuruId: string, dekontAdi: string, referansKodu: string) =>
+    set(s => {
+      s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b
+        : { ...b, odemeDurumu: "inceleniyor", dekontAdi, referansKodu, odemeTarihi: now() });
+      return s;
+    }),
+  odemeOnayla: (basvuruId: string) =>
+    set(s => {
+      s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b
+        : { ...b, odemeDurumu: "alindi" });
+      const b = s.basvurular.find(x => x.id === basvuruId);
+      if (b) s.mesajlar = [{
+        id: genId("M"), konu: "Ödemeniz Alındı",
+        icerik: "Başvuru ücreti ödemesi onaylanmıştır. Başvurunuz geçerli sayılmıştır.",
+        gonderen: "admin", alici: b.adayId, tarih: now(), okundu: false, tur: "basari", ilanId: b.ilanId,
+      }, ...s.mesajlar];
+      return s;
+    }),
+  odemeReddet: (basvuruId: string, gerekce: string) =>
+    set(s => {
+      s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b
+        : { ...b, odemeDurumu: "bekleniyor" });
+      const b = s.basvurular.find(x => x.id === basvuruId);
+      if (b) s.mesajlar = [{
+        id: genId("M"), konu: "Ödemeniz Reddedildi", icerik: gerekce,
+        gonderen: "admin", alici: b.adayId, tarih: now(), okundu: false, tur: "hata", ilanId: b.ilanId,
+      }, ...s.mesajlar];
+      return s;
+    }),
+  iadeIsaretle: (basvuruIds: string[]) =>
+    set(s => { s.basvurular = s.basvurular.map(b => basvuruIds.includes(b.id) ? { ...b, odemeDurumu: "iade_edildi" } : b); return s; }),
+
+  // ─ Kesin kayıt
+  kesinKayitBaslat: (ilanId: string, bitisTarihi: string) =>
+    set(s => {
+      s.ilanlar = s.ilanlar.map(i => i.id !== ilanId ? i
+        : { ...i, kesinKayitAktif: true, kesinKayitBaslangic: today(), kesinKayitBitis: bitisTarihi });
+      // Asil kazanan adaylara bildirim
+      const y = s.yerlestirmeler.find(x => x.ilanId === ilanId && x.yayinlandi);
+      const asillar = y?.sonuclar.filter(r => r.durum === "yerlesti") ?? [];
+      const ilan = s.ilanlar.find(i => i.id === ilanId);
+      asillar.forEach(r => {
+        const bsv = s.basvurular.find(b => b.adayId === r.adayId && b.ilanId === ilanId);
+        if (bsv) {
+          s.basvurular = s.basvurular.map(b => b.id === bsv.id ? { ...b, kesinKayitDurumu: "beklemede" } : b);
+        }
+        s.mesajlar = [{
+          id: genId("M"), konu: "Kesin Kayıt Dönemi Başladı",
+          icerik: `Tebrikler, ${ilan?.baslik ?? ""} programına asil olarak yerleştiniz. Kesin kayıt işleminizi ${bitisTarihi} tarihine kadar tamamlayınız.`,
+          gonderen: "admin", alici: r.adayId, tarih: now(), okundu: false, tur: "basari", onemli: true, ilanId,
+        }, ...s.mesajlar];
+      });
+      return s;
+    }),
+  kesinKayitTamamla: (basvuruId: string, evraklar: { ad: string; boyutKB: number; tip: string }[], taahhut: boolean) =>
+    set(s => {
+      s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b
+        : { ...b, kesinKayitEvraklar: evraklar, taahhutOnayi: taahhut, kesinKayitDurumu: "inceleniyor" });
+      return s;
+    }),
+  kesinKayitAdminOnay: (basvuruId: string, onay: boolean, gerekce?: string) =>
+    set(s => {
+      s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b : {
+        ...b,
+        kesinKayitDurumu: onay ? "onaylandi" : "reddedildi",
+        kesinKayitOnayTarihi: now(),
+        kesinKayitRedNedeni: onay ? undefined : gerekce,
+        kayitBelgesiPdf: onay ? `KKB-${b.adayId}-${b.ilanId}.pdf` : undefined,
+      });
+      const b = s.basvurular.find(x => x.id === basvuruId);
+      if (b) s.mesajlar = [{
+        id: genId("M"),
+        konu: onay ? "Kesin Kayıt Onaylandı" : "Kesin Kayıt Reddedildi",
+        icerik: onay ? "Kesin kayıt işleminiz onaylanmıştır. Kayıt Belgenizi (Barkodlu PDF) panelinizden indirebilirsiniz."
+                     : (gerekce ?? "Eksik/hatalı evrak. Lütfen düzeltip yeniden yükleyin."),
+        gonderen: "admin", alici: b.adayId, tarih: now(), okundu: false,
+        tur: onay ? "basari" : "hata", onemli: true, ilanId: b.ilanId,
+      }, ...s.mesajlar];
+      return s;
+    }),
+  kesinKayitFeragat: (basvuruId: string) =>
+    set(s => {
+      const bsv = s.basvurular.find(b => b.id === basvuruId);
+      if (!bsv) return s;
+      s.basvurular = s.basvurular.map(b => b.id !== basvuruId ? b : {
+        ...b, kesinKayitDurumu: "feragat", durum: "yerlestirilmedi",
+      });
+      // Yedek zincirini tetikle: en yakın yedeği asil'e çevir
+      const y = s.yerlestirmeler.find(x => x.ilanId === bsv.ilanId && x.yayinlandi);
+      if (y) {
+        const yedekAday = y.sonuclar.filter(r => r.durum === "yedek").sort((a, b) => (a.yedekSirasi ?? 999) - (b.yedekSirasi ?? 999))[0];
+        if (yedekAday) {
+          s.yerlestirmeler = s.yerlestirmeler.map(z => z.id !== y.id ? z : {
+            ...z,
+            sonuclar: z.sonuclar.map(r => r.adayId === bsv.adayId ? { ...r, durum: "yerlesmedi" as const }
+              : r.adayId === yedekAday.adayId ? { ...r, durum: "yerlesti" as const, yedekSirasi: undefined } : r),
+          });
+          const yedekBsv = s.basvurular.find(b => b.adayId === yedekAday.adayId && b.ilanId === bsv.ilanId);
+          if (yedekBsv) {
+            s.basvurular = s.basvurular.map(b => b.id !== yedekBsv.id ? b : { ...b, durum: "yerlestirildi", kesinKayitDurumu: "beklemede" });
+          }
+          s.mesajlar = [{
+            id: genId("M"), konu: "Sıranız Asil Listeye Yükseldi",
+            icerik: "Asil adayın feragat etmesi nedeniyle sıranız gelmiştir. 3 gün içinde tercih ücretinizi yatırıp kesin kayıt işleminizi tamamlayınız.",
+            gonderen: "admin", alici: yedekAday.adayId, tarih: now(), okundu: false, tur: "basari", onemli: true, ilanId: bsv.ilanId,
+          }, ...s.mesajlar];
+        }
+      }
+      return s;
+    }),
+
+  // ─ Ek Tercih Dönemi
+  ekTercihBaslat: (ilanId: string, bitisTarihi: string) =>
+    set(s => {
+      s.ilanlar = s.ilanlar.map(i => i.id !== ilanId ? i
+        : { ...i, ekTercihAktif: true, ekTercihBaslangic: today(), ekTercihBitis: bitisTarihi });
+      return s;
+    }),
+  ekTercihKapat: (ilanId: string) =>
+    set(s => { s.ilanlar = s.ilanlar.map(i => i.id === ilanId ? { ...i, ekTercihAktif: false } : i); return s; }),
+
+  // ─ Çoklu sınav arşiv (sene geçince önceki yıl belgeleri arşivlenir)
+  sinavlarArsivle: (yeniYil: number) =>
+    set(s => {
+      s.profiller = s.profiller.map(p => ({
+        ...p,
+        sinavlar: p.sinavlar.map(sn => sn.sinavYili < yeniYil ? { ...sn, arsivlendi: true } : sn),
+      }));
+      return s;
+    }),
+
+  // ─ Manuel aday ekleme + Excel toplu içe aktarma
+  adayManuelEkle: (payload: Omit<Aday, "kayitTarihi" | "aktif">) => {
+    if (state.adaylar.some(a => a.id === payload.id)) return { ok: false, error: "TCKN zaten kayıtlı." };
+    set(s => { s.adaylar = [{ ...payload, kayitTarihi: now(), aktif: true }, ...s.adaylar]; return s; });
+    return { ok: true };
+  },
+  adaylarToplu: (rows: Array<Pick<Aday, "id" | "ad" | "soyad" | "eposta" | "telefon" | "sinavPuani"> & { sehitGaziMi?: boolean }>) => {
+    const kabul: typeof rows = []; const red: { row: typeof rows[number]; sebep: string }[] = [];
+    const mevcutIds = new Set(state.adaylar.map(a => a.id));
+    rows.forEach(r => {
+      if (!/^\d{11}$/.test(r.id)) red.push({ row: r, sebep: "TCKN 11 hane olmalı" });
+      else if (mevcutIds.has(r.id) || kabul.some(k => k.id === r.id)) red.push({ row: r, sebep: "Mükerrer TCKN" });
+      else kabul.push(r);
+    });
+    set(s => {
+      const yeniler: Aday[] = kabul.map(r => ({
+        id: r.id, ad: r.ad, soyad: r.soyad, eposta: r.eposta, telefon: r.telefon,
+        dogumTarihi: "2000-01-01", cinsiyet: "Erkek", sehir: "—",
+        egitim: "Lise", sinavPuani: r.sinavPuani,
+        kayitTarihi: now(), kvkkOnayi: false, aktif: true,
+      }));
+      s.adaylar = [...yeniler, ...s.adaylar];
+      if (r_shg(kabul).length) {
+        // Şehit/gazi işaretli olanlar için profil oluştur
+        s.profiller = [
+          ...r_shg(kabul).map(r => ({
+            adayId: r.id,
+            kimlik: { uyruk: "T.C." as Uyruk, kimlikNo: r.id, ad: r.ad, soyad: r.soyad, dogumTarihi: "", medeniHal: "" as "", cinsiyet: "Erkek" as const },
+            sehitGazi: { varMi: true },
+            egitimler: [], sinavlar: [], sorumlulukBeyani: false, kvkkOnayi: false, guncelleme: now(),
+          })),
+          ...s.profiller,
+        ];
+      }
+      return s;
+    });
+    return { kabul: kabul.length, red: red.length, redDetay: red };
+  },
+
   // ─ Reset (test/demo için)
   resetAll: () => { state = seed; notify(); },
 };
+
+// yardımcı — Şehit/Gazi işaretlileri filtrele
+function r_shg<T extends { sehitGaziMi?: boolean }>(arr: T[]): T[] {
+  return arr.filter(x => x.sehitGaziMi);
+}
 
 // Selector yardımcıları
 export const select = {

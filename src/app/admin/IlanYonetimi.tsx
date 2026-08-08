@@ -68,6 +68,18 @@ export default function IlanYonetimi() {
     actions.yerlestirmeYayinla(y.id);
     alert("Sonuçlar yayınlandı. İlan artık 'Güncel Duyurular' panelinde görünür.");
   };
+  const ekTercihBaslatFn = (id: string) => {
+    const bitis = prompt("Ek tercih bitiş tarihi (YYYY-MM-DD)?", new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10));
+    if (!bitis) return;
+    actions.ekTercihBaslat(id, bitis);
+    alert(`Ek tercih dönemi başlatıldı. Bitiş: ${bitis}. Kalan kontenjanlar sıralamadaki adaylara yeniden açıldı.`);
+  };
+  const kesinKayitBaslatFn = (id: string) => {
+    const bitis = prompt("Kesin kayıt bitiş tarihi (YYYY-MM-DD)?", new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10));
+    if (!bitis) return;
+    actions.kesinKayitBaslat(id, bitis);
+    alert(`Kesin kayıt dönemi başlatıldı. Bitiş: ${bitis}. Asil adaylara bildirim gönderildi.`);
+  };
 
   const addKriter = () => {
     if (!krtInput.trim() || !editing) return;
@@ -128,6 +140,8 @@ export default function IlanYonetimi() {
                 {r.durum === "yayin"  && <Btn size="sm" variant="ghost"   onClick={() => kapat(r)}><Archive className="w-3 h-3" /> Süreyi Bitir</Btn>}
                 {r.durum === "kapali" && <Btn size="sm" variant="ghost"   onClick={() => runSimulasyon(r.id)}><Play className="w-3 h-3" /> Simülasyon</Btn>}
                 {r.durum === "kapali" && <Btn size="sm" variant="success" onClick={() => yayinlaSonuc(r.id)}><Award className="w-3 h-3" /> Sonuçları Yayınla</Btn>}
+                {r.durum === "yerlestirildi" && !r.kesinKayitAktif && <Btn size="sm" variant="light" onClick={() => kesinKayitBaslatFn(r.id)}>Kesin Kayıt Başlat</Btn>}
+                {r.durum === "yerlestirildi" && !r.ekTercihAktif && <Btn size="sm" variant="light" onClick={() => ekTercihBaslatFn(r.id)}>Ek Tercih Aç</Btn>}
                 <Btn size="sm" variant="ghost" onClick={() => openEdit(r)}><Edit3 className="w-3 h-3" /></Btn>
                 <Btn size="sm" variant="danger" onClick={() => sil(r)}><Trash2 className="w-3 h-3" /></Btn>
               </div>

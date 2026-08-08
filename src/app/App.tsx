@@ -20,6 +20,8 @@ import CagriSinavDurumu from "./aday/CagriSinavDurumu";
 import TercihEkrani from "./aday/TercihEkrani";
 import DuyuruDetay from "./aday/DuyuruDetay";
 import Mesajlarim from "./aday/Mesajlarim";
+import KesinKayit from "./aday/KesinKayit";
+import Odeme from "./aday/Odeme";
 import { actions as storeActions, useStore as useSharedStore } from "./shared/store";
 
 // Turkish flag & institutional palette
@@ -2552,29 +2554,33 @@ const btnLight = "inline-flex items-center gap-2 px-3.5 py-1.5 text-[13px] font-
 const btnGhost = "inline-flex items-center gap-1.5 px-3 py-1.5 text-[12.5px] font-semibold text-[#555] bg-white hover:bg-[#F5F5F5] border border-[#DDDDDD] rounded-[3px] transition-colors";
 
 function DashboardScreen({ onLogout, onOcr, onSonuc }: { onLogout: () => void; onOcr: () => void; onSonuc: () => void }) {
-  const [view, setView] = useState<"bilgilerim" | "cagriTakip" | "cagriSinav" | "mesajlar" | "saglik" | "tercihYap" | "tercihlerim">("bilgilerim");
+  const [view, setView] = useState<"bilgilerim" | "cagriTakip" | "cagriSinav" | "mesajlar" | "saglik" | "tercihYap" | "tercihlerim" | "kesinkayit" | "odeme">("bilgilerim");
   const [tercihGroupOpen, setTercihGroupOpen] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const menuItems = [
     { id: "bilgilerim",   label: "Bilgilerim" },
-    { id: "cagriTakip",   label: "Çağrı Takip" },
-    { id: "cagriSinav",   label: "Çağrı/Sınav Durumu" },
-    { id: "mesajlar",     label: "Mesajlarım" },
-    { id: "saglik",       label: "Sağlık Raporlarım" },
     { id: "tercihYap",    label: "Tercih Yap" },
     { id: "tercihlerim",  label: "Tercihlerim" },
+    { id: "odeme",        label: "Ödemelerim" },
+    { id: "kesinkayit",   label: "Kesin Kayıt" },
+    { id: "cagriSinav",   label: "Çağrı/Sınav Durumu" },
+    { id: "cagriTakip",   label: "Çağrı Takip" },
+    { id: "mesajlar",     label: "Mesajlarım" },
+    { id: "saglik",       label: "Sağlık Raporlarım" },
   ] as const;
 
   const titleMap = {
     bilgilerim:  "Başvuru Sihirbazı",
-    cagriTakip:  "Çağrı Takip",
-    cagriSinav:  "Çağrı/Sınav Durumu",
-    mesajlar:    "Mesajlarım",
-    saglik:      "Sağlık Raporlarım",
     tercihYap:   "Tercih Yap",
     tercihlerim: "Tercihlerim",
+    odeme:       "Ödemelerim",
+    kesinkayit:  "Kesin Kayıt İşlemleri",
+    cagriSinav:  "Çağrı/Sınav Durumu",
+    cagriTakip:  "Çağrı Takip",
+    mesajlar:    "Mesajlarım",
+    saglik:      "Sağlık Raporlarım",
   } as const;
 
   const wizardTabs = [
@@ -2748,6 +2754,16 @@ function DashboardScreen({ onLogout, onOcr, onSonuc }: { onLogout: () => void; o
             {/* ═════ MESAJLARIM (renkli bildirimler) ═════ */}
             {view === "mesajlar" && (
               <Mesajlarim adayId="18878273464" />
+            )}
+
+            {/* ═════ KESIN KAYIT ═════ */}
+            {view === "kesinkayit" && (
+              <KesinKayit adayId="18878273464" />
+            )}
+
+            {/* ═════ ÖDEMELERIM ═════ */}
+            {view === "odeme" && (
+              <Odeme adayId="18878273464" />
             )}
 
             {/* ═════ SAĞLIK RAPORLARIM ═════ */}

@@ -5,7 +5,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, ClipboardList, Users, FileCheck2, Shuffle,
   Megaphone, MessageSquare, Settings, LogOut, Menu, Bell, Search, User as UserIcon,
-  UserCheck,
+  UserCheck, Award, CreditCard,
 } from "lucide-react";
 import { MSB, FONT } from "../shared/theme";
 import { useStore, actions, select } from "../shared/store";
@@ -17,10 +17,12 @@ import Yerlestirme from "./Yerlestirme";
 import DuyuruYonetimi from "./DuyuruYonetimi";
 import MesajYonetimi from "./MesajYonetimi";
 import BasvuruYonetimi from "./BasvuruYonetimi";
+import KesinKayitYonetimi from "./KesinKayitYonetimi";
+import FinansYonetimi from "./FinansYonetimi";
 
 export type AdminView =
   | "dashboard" | "ilanlar" | "basvurular" | "adaylar" | "belgeler"
-  | "yerlestirme" | "duyurular" | "mesajlar" | "ayarlar";
+  | "yerlestirme" | "kesinkayit" | "finans" | "duyurular" | "mesajlar" | "ayarlar";
 
 const menu: { id: AdminView; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; badge?: (s: ReturnType<typeof useStore>) => number | null }[] = [
   { id: "dashboard",   label: "Dashboard",       icon: LayoutDashboard },
@@ -29,6 +31,8 @@ const menu: { id: AdminView; label: string; icon: React.ComponentType<{ classNam
   { id: "adaylar",     label: "Adaylar",         icon: Users,           badge: s => select.toplamAday(s) },
   { id: "belgeler",    label: "Belge Onay",      icon: FileCheck2,     badge: s => select.bekleyenBelgeSayisi(s) || null },
   { id: "yerlestirme", label: "Yerleştirme",     icon: Shuffle },
+  { id: "kesinkayit",  label: "Kesin Kayıt",     icon: Award, badge: s => s.basvurular.filter(b => b.kesinKayitDurumu === "inceleniyor").length || null },
+  { id: "finans",      label: "Finans / İade",    icon: CreditCard, badge: s => s.basvurular.filter(b => b.odemeDurumu === "inceleniyor" || b.odemeDurumu === "iade_edilecek").length || null },
   { id: "duyurular",   label: "Duyurular",       icon: Megaphone },
   { id: "mesajlar",    label: "Mesajlar",        icon: MessageSquare,   badge: s => s.mesajlar.filter(m => !m.okundu && m.alici === "admin").length || null },
   { id: "ayarlar",     label: "Ayarlar",         icon: Settings },
@@ -147,6 +151,8 @@ export default function AdminScreen({ onLogout }: { onLogout: () => void }) {
             {view === "adaylar"     && <AdayYonetimi q={q} />}
             {view === "belgeler"    && <BelgeOnay />}
             {view === "yerlestirme" && <Yerlestirme />}
+            {view === "kesinkayit"  && <KesinKayitYonetimi />}
+            {view === "finans"      && <FinansYonetimi />}
             {view === "duyurular"   && <DuyuruYonetimi />}
             {view === "mesajlar"    && <MesajYonetimi />}
             {view === "ayarlar"     && <AyarlarPanel />}
