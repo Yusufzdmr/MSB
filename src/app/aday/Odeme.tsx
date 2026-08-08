@@ -18,6 +18,7 @@ function refKod(adayId: string, ilanId: string): string {
 export default function Odeme({ adayId }: { adayId: string }) {
   const basvurular = useStore(s => s.basvurular.filter(b => b.adayId === adayId));
   const ilanlar = useStore(s => s.ilanlar);
+  const profil = useStore(s => s.profiller.find(p => p.adayId === adayId));
   const [aktifId, setAktifId] = useState<string | null>(basvurular[0]?.id ?? null);
   const [dekontAdi, setDekontAdi] = useState("");
   const [kopyalandi, setKopyalandi] = useState<string | null>(null);
@@ -25,10 +26,26 @@ export default function Odeme({ adayId }: { adayId: string }) {
   const aktif = basvurular.find(b => b.id === aktifId);
   const ilan = aktif ? ilanlar.find(i => i.id === aktif.ilanId) : null;
 
+  // Aday şehit/gazi yakını mı? Profili onaylanmış mı? (mock: sadece varMi bakıyoruz)
+  const sehitGaziYakinliVar = !!profil?.sehitGazi.varMi;
+
+  // Ödeme gereken başvurular — şehit/gazi muafiyeti + iade edilmiş + alındı hariç
   const odemeGereken = useMemo(() => basvurular.filter(b => {
     const il = ilanlar.find(i => i.id === b.ilanId);
-    return il?.odemeKurali && il.odemeKurali !== "yok" && il.ucretTutari && b.odemeDurumu !== "alindi" && b.odemeDurumu !== "iade_edildi";
-  }), [basvurular, ilanlar]);
+    if (!il?.odemeKurali || il.odemeKurali === "yok" || !il.ucretTutari) return false;
+    if (b.odemeDurumu === "alindi" || b.odemeDurumu === "iade_edildi" || b.odemeDurumu === "iptal") return false;
+    // Şehit/gazi muafiyeti: bu ilanda muafiyet aktif ve aday şehit/gazi yakını ise ödeme adımı gösterilmez
+    if (il.sehitGaziUcretMuaf && sehitGaziYakinliVar) return false;
+    // Yedek sırada olan aday henüz asile yükselmediyse ödeme yapmaz (spec)
+    if (b.durum === "yedek") return false;
+    return true;
+  }), [basvurular, ilanlar, sehitGaziYakinliVar]);
+
+  // Muafiyet nedeniyle ödemeden muaf tutulan başvurular
+  const muafBasvurular = useMemo(() => basvurular.filter(b => {
+    const il = ilanlar.find(i => i.id === b.ilanId);
+    return il?.odemeKurali && il.odemeKurali !== "yok" && il.sehitGaziUcretMuaf && sehitGaziYakinliVar;
+  }), [basvurular, ilanlar, sehitGaziYakinliVar]);
 
   const kopyala = (t: string | undefined, ne: string) => {
     if (!t) return;
@@ -51,10 +68,32 @@ export default function Odeme({ adayId }: { adayId: string }) {
 
   if (odemeGereken.length === 0) {
     return (
-      <div className="bg-white border border-[#DDD] rounded p-10 text-center">
-        <CreditCard className="w-12 h-12 mx-auto text-[#CCC] mb-3" />
-        <h3 className="text-[15px] font-semibold text-[#555] mb-1">Ödenmesi gereken bir başvuru bulunmuyor.</h3>
-        <p className="text-[13px] text-[#888]">Ücretli ilanlarda tercih kayıt sonrası ödeme talebi burada görünür.</p>
+      <div className="space-y-3">
+        {/* Şehit/Gazi muafiyet bildirimi */}
+        {muafBasvurular.length > 0 && (
+          <div className="p-4 rounded border-l-4" style={{ background: "#EEF6E8", borderColor: "#C7DDB0", borderLeftColor: "#5E7F42", color: "#5E7F42" }}>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 mt-0.5 flex-shrink-0" strokeWidth={2.5} />
+              <div>
+                <div className="text-[14px] font-bold uppercase mb-1">Ücretten Muafsınız</div>
+                <div className="text-[12.5px] leading-relaxed">
+                  Şehit/gazi yakını olarak profili onaylanmış aday statünüz gereği aşağıdaki {muafBasvurular.length} başvurunuz için başvuru/tercih ücretinden <strong>muaf tutulmaktasınız</strong>. Doğrudan simülasyon havuzuna dahil edildiniz.
+                </div>
+                <ul className="mt-2 space-y-0.5 text-[12px]">
+                  {muafBasvurular.map(b => {
+                    const il = ilanlar.find(i => i.id === b.ilanId);
+                    return <li key={b.id}>• <strong>{il?.baslik}</strong> — {il?.ucretTutari} TL (muaf)</li>;
+                  })}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="bg-white border border-[#DDD] rounded p-10 text-center">
+          <CreditCard className="w-12 h-12 mx-auto text-[#CCC] mb-3" />
+          <h3 className="text-[15px] font-semibold text-[#555] mb-1">Ödenmesi gereken bir başvuru bulunmuyor.</h3>
+          <p className="text-[13px] text-[#888]">Ücretli ilanlarda tercih kayıt sonrası ödeme talebi burada görünür. Yedek sıradaki adaylar sıraları asile yükselene kadar ödeme yapmaz.</p>
+        </div>
       </div>
     );
   }
