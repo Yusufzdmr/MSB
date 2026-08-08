@@ -594,7 +594,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
   };
 
   const featured = (live?.teminler && live.teminler.length >= 3)
-    ? live.teminler.slice(0, 6).map((t): typeof featuredStatic[number] => ({
+    ? live.teminler.slice(0, 6).map((t, i): typeof featuredStatic[number] => ({
         cat: kategoriBul(t.title),
         title: t.title,
         date: t.date || "—",
