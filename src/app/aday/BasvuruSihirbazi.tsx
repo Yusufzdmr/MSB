@@ -8,7 +8,7 @@ import {
   Upload, X, Trash2, Camera, ShieldCheck, Award, GraduationCap, ScanLine,
 } from "lucide-react";
 import { MSB } from "../shared/theme";
-import { actions, useStore, type BasvuruProfili, type EgitimKaydi, type SinavKaydi,
+import { actions, useStore, type BasvuruProfili, type EgitimKaydi, type SinavKaydi, type SinavDetayKalem,
   type NotSistemi, type OgretimTipi, type Uyruk, type MedeniHal, type YakinlikDerecesi,
   type EgitimDurumu, type SinavTuru, type EgitimSeviyeKod } from "../shared/store";
 import {
@@ -236,22 +236,37 @@ function Adim2SehitGazi({ p, onChange }: { p: BasvuruProfili; onChange: (patch: 
             Yükleyeceğiniz belgenin <strong>e-Devlet kapısı üzerinden alınmış, barkodlu ve sorgulanabilir</strong> resmi belge olması zorunludur. Üzerinde barkod/karekod bulunmayan veya tahrifat yapılmış belgeler geçersiz sayılacak ve yasal işlem başlatılacaktır.
           </InfoBox>
 
-          {/* Dosya yükleme */}
-          <div className="border-2 border-dashed border-[#CCC] rounded p-6 text-center bg-[#FAFAFA] mb-4">
+          {/* Dosya yükleme — OCR uyuşmazlıkta kırmızı çerçeveli */}
+          <div
+            className={`border-2 border-dashed rounded p-6 text-center mb-4 ${
+              s.ocrEslesmeUyari
+                ? "border-[#A82232] bg-[#FBECEE]"
+                : belgeAdi && s.ocrTcKimlik
+                ? "border-[#5E7F42] bg-[#EEF6E8]"
+                : "border-[#CCC] bg-[#FAFAFA]"
+            }`}
+          >
             {belgeAdi ? (
-              <div className="flex items-center justify-center gap-3">
-                <FileText className="w-8 h-8 text-[#A82232]" />
-                <div className="text-left">
-                  <div className="text-[13.5px] font-semibold text-[#222]">{belgeAdi}</div>
-                  <div className="text-[11.5px] text-[#666]">{belgeBoyut} KB · PDF</div>
+              <>
+                <div className="flex items-center justify-center gap-3">
+                  <FileText className={`w-8 h-8 ${s.ocrEslesmeUyari ? "text-[#A82232]" : "text-[#5E7F42]"}`} />
+                  <div className="text-left">
+                    <div className={`text-[13.5px] font-bold ${s.ocrEslesmeUyari ? "text-[#A82232]" : "text-[#333]"}`}>{belgeAdi}</div>
+                    <div className="text-[11.5px] text-[#666]">{belgeBoyut} KB · PDF · OCR: {s.ocrEslesmeUyari ? "❌ UYUŞMAZLIK" : "✓ Eşleşti"}</div>
+                  </div>
+                  <button className={btnLgt + " ml-3"} onClick={() => {
+                    setBelgeAdi(""); setBelgeBoyut(0);
+                    onChange({ sehitGazi: { ...s, belgeAdi: undefined, belgeBoyutKB: undefined, ocrTcKimlik: undefined, ocrAdSoyad: undefined, ocrYakinlik: undefined, ocrEslesmeUyari: undefined } });
+                  }}>
+                    <Trash2 className="w-3.5 h-3.5" /> Kaldır
+                  </button>
                 </div>
-                <button className={btnLgt + " ml-3"} onClick={() => {
-                  setBelgeAdi(""); setBelgeBoyut(0);
-                  onChange({ sehitGazi: { ...s, belgeAdi: undefined, belgeBoyutKB: undefined } });
-                }}>
-                  <Trash2 className="w-3.5 h-3.5" /> Kaldır
-                </button>
-              </div>
+                {s.ocrEslesmeUyari && (
+                  <div className="mt-3 text-[12px] text-[#A82232] font-bold uppercase tracking-wide">
+                    ⚠ Belge kırmızıyla işaretlendi — kimlik bilgileri eşleşmiyor
+                  </div>
+                )}
+              </>
             ) : (
               <>
                 <Upload className="w-10 h-10 mx-auto text-[#AAA] mb-2" />
@@ -318,6 +333,8 @@ function EgitimPopup({ open, onClose, onSave, kimlikNo }: {
   const [durum, setDurum] = useState<EgitimDurumu>("Mezun");
   const [seviyeKod, setSeviyeKod] = useState<EgitimSeviyeKod | "">("");
   const [universite, setUniversite] = useState(""); const [fakulte, setFakulte] = useState(""); const [bolum, setBolum] = useState("");
+  const [bolumKodu, setBolumKodu] = useState("");
+  const [sinif, setSinif] = useState("");
   const [ogretimTipi, setOgretimTipi] = useState<OgretimTipi>("Örgün Öğretim");
   const [egitimYeri, setEgitimYeri] = useState<"Türkiye" | "KKTC">("Türkiye");
   const [il, setIl] = useState(""); const [ilce, setIlce] = useState(""); const [okulAdi, setOkulAdi] = useState("");
@@ -340,6 +357,7 @@ function EgitimPopup({ open, onClose, onSave, kimlikNo }: {
   useEffect(() => { if (!open) return;
     // Popup açıldığında sıfırla
     setDurum("Mezun"); setSeviyeKod(""); setUniversite(""); setFakulte(""); setBolum("");
+    setBolumKodu(""); setSinif("");
     setEgitimYeri("Türkiye"); setIl(""); setIlce(""); setOkulAdi("");
     setDiplomaNo(""); setBaslangicTarihi(""); setMezuniyetTarihi("");
     setNotSistemi("4 üzerinden"); setMezuniyetNotu(""); setBelgeAdi("");
@@ -363,6 +381,8 @@ function EgitimPopup({ open, onClose, onSave, kimlikNo }: {
     const payload: Omit<EgitimKaydi, "id"> = {
       durum, seviye: seviye.kod, seviyeAdi: seviye.ad,
       ...(isYo && { universite, fakulte, bolum, ogretimTipi }),
+      ...(isYo && durum === "Öğrenci" && sinif ? { sinif } : {}),
+      ...(isYo && durum === "Mezun" && bolumKodu ? { bolumKodu } : {}),
       ...(isLise && { egitimYeri, il, ilce, okulAdi }),
       diplomaNo, baslangicTarihi, mezuniyetTarihi,
       notSistemi, mezuniyetNotu, belgeAdi,
@@ -473,6 +493,22 @@ function EgitimPopup({ open, onClose, onSave, kimlikNo }: {
                   <option>Açık Öğretim</option><option>Dışardan Öğretim</option>
                 </select>
               </div>
+              {durum === "Öğrenci" && (
+                <div>
+                  <label className={lbl}>Sınıf <span className="text-[#888] normal-case">(devam ediyorsa)</span></label>
+                  <select className={sel} value={sinif} onChange={e => setSinif(e.target.value)}>
+                    <option value="">Seçiniz</option>
+                    <option>Hazırlık</option><option>1. SINIF</option><option>2. SINIF</option>
+                    <option>3. SINIF</option><option>4. SINIF</option><option>5. SINIF</option><option>6. SINIF</option>
+                  </select>
+                </div>
+              )}
+              {durum === "Mezun" && (
+                <div>
+                  <label className={lbl}>Bölüm Kodu <span className="text-[#888] normal-case">(ops.)</span></label>
+                  <input className={inp} value={bolumKodu} onChange={e => setBolumKodu(e.target.value)} placeholder="Örn: 0000" />
+                </div>
+              )}
             </div>
           )}
 
@@ -584,12 +620,12 @@ function Adim3Egitim({ p }: { p: BasvuruProfili }) {
         ) : ogrenci.map(e => (
           <div key={e.id} className="border border-[#EEE] rounded p-3 mb-2">
             <div className="text-[13px] font-bold text-[#333] mb-2">{e.seviyeAdi}</div>
-            <div className="grid grid-cols-2 gap-y-1 text-[12.5px]">
+            <div className="grid grid-cols-[160px_1fr] gap-y-1 text-[12.5px]">
               <span className="text-[#666] text-right pr-2">Okul Adı:</span><span className="font-semibold">{e.universite || e.okulAdi}</span>
               {e.fakulte && (<><span className="text-[#666] text-right pr-2">Fakülte / MYO:</span><span>{e.fakulte}</span></>)}
               {e.bolum && (<><span className="text-[#666] text-right pr-2">Bölüm:</span><span>{e.bolum}</span></>)}
               <span className="text-[#666] text-right pr-2">Öğretim Tipi:</span><span>{e.ogretimTipi ?? "—"}</span>
-              <span className="text-[#666] text-right pr-2">Sınıf:</span><span>Devam ediyor</span>
+              <span className="text-[#666] text-right pr-2">Sınıfı:</span><span className="font-semibold">{e.sinif ?? "Devam ediyor"}</span>
             </div>
             <div className="flex justify-end mt-2 pt-2 border-t border-[#EEE]">
               <button onClick={() => actions.egitimSil(p.adayId, e.id)}
@@ -610,12 +646,13 @@ function Adim3Egitim({ p }: { p: BasvuruProfili }) {
           {mezunYo.map(e => (
             <div key={e.id} className="border border-[#EEE] rounded p-3 mb-2">
               <div className="text-[13px] font-bold text-[#333] mb-2">{e.seviyeAdi}</div>
-              <div className="grid grid-cols-2 gap-y-1 text-[12.5px]">
+              <div className="grid grid-cols-[180px_1fr] gap-y-1 text-[12.5px]">
                 <span className="text-[#666] text-right pr-2">Okul Adı:</span><span className="font-semibold">{e.universite}</span>
                 <span className="text-[#666] text-right pr-2">Fakülte / MYO:</span><span>{e.fakulte}</span>
                 <span className="text-[#666] text-right pr-2">Bölüm:</span><span>{e.bolum}</span>
-                <span className="text-[#666] text-right pr-2">Mezuniyet Tarihi:</span><span>{e.mezuniyetTarihi ?? "—"}</span>
-                <span className="text-[#666] text-right pr-2">Not Sistemi / Not:</span><span>{e.notSistemi} — {e.mezuniyetNotu}</span>
+                <span className="text-[#666] text-right pr-2">Mezuniyet Tarihi:</span><span>{e.mezuniyetTarihi ? new Date(e.mezuniyetTarihi).toLocaleDateString("tr-TR") : "—"}</span>
+                {e.bolumKodu && (<><span className="text-[#666] text-right pr-2">Bölüm Kodu:</span><span className="tabular-nums">{e.bolumKodu}</span></>)}
+                <span className="text-[#666] text-right pr-2">Diploma Not Sistemi / Diploma Notu:</span><span>{e.notSistemi} — <strong>{e.mezuniyetNotu}</strong></span>
                 {e.egitimUlkesi && (<><span className="text-[#666] text-right pr-2">Ülke / Dil:</span><span>{e.egitimUlkesi} / {e.egitimDili}</span></>)}
               </div>
               <div className="flex justify-end mt-2 pt-2 border-t border-[#EEE]">
@@ -637,11 +674,11 @@ function Adim3Egitim({ p }: { p: BasvuruProfili }) {
           </div>
           {mezunLise.map(e => (
             <div key={e.id} className="border border-[#EEE] rounded p-3 mb-2">
-              <div className="grid grid-cols-2 gap-y-1 text-[12.5px]">
-                <span className="text-[#666] text-right pr-2">Okul Yeri:</span><span>{e.egitimYeri} / {e.il} / {e.ilce}</span>
+              <div className="grid grid-cols-[180px_1fr] gap-y-1 text-[12.5px]">
+                <span className="text-[#666] text-right pr-2">Okul Yeri:</span><span className="font-semibold">{e.egitimYeri} / {(e.il ?? "").toLocaleUpperCase("tr")} / {(e.ilce ?? "").toLocaleUpperCase("tr")}</span>
                 <span className="text-[#666] text-right pr-2">Okul Adı:</span><span className="font-semibold">{e.okulAdi}</span>
-                <span className="text-[#666] text-right pr-2">Mezuniyet Tarihi:</span><span>{e.mezuniyetTarihi ?? "—"}</span>
-                <span className="text-[#666] text-right pr-2">Not Sistemi / Not:</span><span>{e.notSistemi} — {e.mezuniyetNotu}</span>
+                <span className="text-[#666] text-right pr-2">Mezuniyet Tarihi:</span><span>{e.mezuniyetTarihi ? new Date(e.mezuniyetTarihi).toLocaleDateString("tr-TR") : "—"}</span>
+                <span className="text-[#666] text-right pr-2">Diploma Not Sistemi / Diploma Notu:</span><span>{e.notSistemi} — <strong>{e.mezuniyetNotu}</strong></span>
               </div>
               <div className="flex justify-end mt-2 pt-2 border-t border-[#EEE]">
                 <button onClick={() => actions.egitimSil(p.adayId, e.id)}
@@ -705,17 +742,66 @@ function SinavPopup({ open, onClose, onSave }: {
 
   const handleSave = () => {
     if (!canSave || !sinav) return;
-    // OCR simülasyonu — sınav türüne göre çekilen alanlar
+    const rnd = (min: number, max: number) => Math.round((min + Math.random() * (max - min)) * 100) / 100;
+    const rndSira = () => Math.floor(1000 + Math.random() * 200000);
+
+    // OCR simülasyonu — sınav türüne göre gerçekçi çoklu-puan detay üret
+    let ocrDetay: SinavDetayKalem[] | undefined = undefined;
+    let puan = rnd(60, 95);
+    let siralama = rndSira();
+    let yuzdelikDilim: number | undefined = undefined;
+    let seviye: string | undefined = undefined;
+
+    if (sinav === "YKS") {
+      // TYT / SAY / SÖZ / EA ayrı ayrı ham puan + sıralama
+      ocrDetay = [
+        { etiket: "TYT", puan: rnd(200, 500), siralama: rndSira() },
+        { etiket: "SAY", puan: rnd(180, 550), siralama: rndSira() },
+        { etiket: "SÖZ", puan: rnd(180, 500), siralama: rndSira() },
+        { etiket: "EA",  puan: rnd(180, 520), siralama: rndSira() },
+      ];
+      puan = ocrDetay[0].puan!;   // özet için TYT
+    } else if (sinav === "MSÜ") {
+      // Harp Okulları (SAY/SÖZ/EA) + Astsubay MYO (TYT) ayrı sıralama
+      ocrDetay = [
+        { etiket: "Harp Okulları — Sayısal", puan: rnd(200, 450), siralama: rndSira() },
+        { etiket: "Harp Okulları — Sözel",   puan: rnd(200, 430), siralama: rndSira() },
+        { etiket: "Harp Okulları — EA",       puan: rnd(200, 440), siralama: rndSira() },
+        { etiket: "Astsubay MYO — TYT",       puan: rnd(180, 400), siralama: rndSira() },
+      ];
+      const secilen = ocrDetay.find(d => d.etiket === alan);
+      puan = secilen?.puan ?? puan;
+      siralama = secilen?.siralama ?? siralama;
+    } else if (sinav === "KPSS Ön Lisans") {
+      // Yalnızca P93 — Türkiye Geneli Başarı Sırası
+      ocrDetay = [{ etiket: "P93 — Türkiye Geneli Başarı Sırası", puan: rnd(50, 90), siralama: rndSira() }];
+      puan = ocrDetay[0].puan!;
+      siralama = ocrDetay[0].siralama!;
+    } else if (sinav === "YDS") {
+      // 0-100 ham + A/B/C/D/E seviye
+      puan = rnd(0, 100);
+      seviye = puan >= 90 ? "A" : puan >= 80 ? "B" : puan >= 70 ? "C" : puan >= 60 ? "D" : "E";
+      siralama = 0;
+      ocrDetay = [{ etiket: `YDS Ham (Seviye ${seviye})`, puan, seviye }];
+    } else if (sinav === "TR-YÖS") {
+      yuzdelikDilim = rnd(0.5, 60);
+      puan = rnd(60, 90);
+      ocrDetay = [{ etiket: "TR-YÖS Standart Puan", puan, siralama, yuzdelikDilim }];
+    } else if (sinav === "ALES" || sinav === "DGS") {
+      ocrDetay = [{ etiket: `${sinav} ${alan}`, puan, siralama }];
+    } else if (sinav === "YDT") {
+      ocrDetay = [{ etiket: `${dil} — YDT`, puan, siralama }];
+    } else if (sinav === "KPSS Lisans") {
+      ocrDetay = [{ etiket: `${kategori} — ${altKategori}`, puan, siralama }];
+    }
+
     const payload: Omit<SinavKaydi, "id" | "onayDurumu"> = {
       sinav, sinavYili: sinavYiliOtomatik(), sonucKodu, belgeAdi,
-      kategori: kategori || undefined,
+      kategori: kategori || (sinav === "KPSS Ön Lisans" ? "KPSS P93" : undefined),
       altKategori: altKategori || undefined,
       alan: alan || undefined,
       dil:  dil  || undefined,
-      puan: Math.round((60 + Math.random() * 35) * 100) / 100,
-      siralama: Math.floor(1000 + Math.random() * 200000),
-      yuzdelikDilim: Math.round(Math.random() * 100 * 100) / 100,
-      seviye: sinav === "YDS" ? ["A", "B", "C", "D", "E"][Math.floor(Math.random() * 5)] : undefined,
+      puan, siralama, yuzdelikDilim, seviye, ocrDetay,
     };
     onSave(payload);
     onClose();
@@ -753,6 +839,13 @@ function SinavPopup({ open, onClose, onSave }: {
 
           {!iptal && sinav && (
             <>
+              {/* KPSS Ön Lisans — otomatik P93 bilgilendirme */}
+              {sinav === "KPSS Ön Lisans" && (
+                <InfoBox tone="info">
+                  <strong>KPSS Ön Lisans — P93</strong>: Sistem yalnızca <strong>P93 (Türkiye Geneli Başarı Sırası)</strong> puan ve sıralamasını otomatik olarak okuyacaktır. Manuel seçim gerekmez.
+                </InfoBox>
+              )}
+
               {/* Alt kategori seçimleri */}
               {sinav === "KPSS Lisans" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -843,43 +936,70 @@ function Adim4Sinav({ p }: { p: BasvuruProfili }) {
           Kayıtlı sınav bilgisi bulunmuyor.
         </div>
       ) : (
-        <div className="border border-[#E0E0E0] rounded overflow-hidden">
-          <table className="w-full text-[12.5px]">
-            <thead>
-              <tr style={{ background: MSB.redTable, color: "#fff" }}>
-                <th className="px-3 py-2 text-left font-semibold uppercase tracking-wide text-[10.5px]">Sınav</th>
-                <th className="px-3 py-2 text-left font-semibold uppercase tracking-wide text-[10.5px]">Yıl</th>
-                <th className="px-3 py-2 text-left font-semibold uppercase tracking-wide text-[10.5px]">Kategori/Alan</th>
-                <th className="px-3 py-2 text-right font-semibold uppercase tracking-wide text-[10.5px]">Puan</th>
-                <th className="px-3 py-2 text-right font-semibold uppercase tracking-wide text-[10.5px]">Sıralama</th>
-                <th className="px-3 py-2 text-left font-semibold uppercase tracking-wide text-[10.5px]">Belge</th>
-                <th className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-[10.5px]">Onay</th>
-                <th className="px-3 py-2 w-16"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {p.sinavlar.map((s, i) => (
-                <tr key={s.id} className={i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"}>
-                  <td className="px-3 py-2 font-semibold">{s.sinav}</td>
-                  <td className="px-3 py-2 tabular-nums">{s.sinavYili}</td>
-                  <td className="px-3 py-2 text-[#555]">
-                    {[s.kategori, s.altKategori, s.alan, s.dil, s.seviye].filter(Boolean).join(" / ") || "—"}
-                  </td>
-                  <td className="px-3 py-2 tabular-nums text-right font-semibold">{s.puan?.toFixed(2) ?? "—"}</td>
-                  <td className="px-3 py-2 tabular-nums text-right">{s.siralama?.toLocaleString("tr") ?? "—"}</td>
-                  <td className="px-3 py-2 text-[#555] truncate max-w-[180px]">{s.belgeAdi}</td>
-                  <td className="px-3 py-2 text-center">
-                    {s.onayDurumu === "onaylandi" && <span className="inline-block px-2 py-0.5 bg-[#EEF6E8] text-[#5E7F42] text-[10.5px] font-bold rounded">ONAY</span>}
-                    {s.onayDurumu === "beklemede" && <span className="inline-block px-2 py-0.5 bg-[#FCF3E3] text-[#C87E27] text-[10.5px] font-bold rounded">BEKLEMEDE</span>}
-                    {s.onayDurumu === "reddedildi" && <span className="inline-block px-2 py-0.5 bg-[#FBECEE] text-[#A82232] text-[10.5px] font-bold rounded">RED</span>}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button onClick={() => actions.sinavSil(p.adayId, s.id)} className="text-[11.5px] text-[#A82232] hover:underline"><Trash2 className="w-3 h-3 inline" /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {p.sinavlar.map(s => {
+            const onayStyle = s.onayDurumu === "onaylandi"
+              ? { bg: "#EEF6E8", brd: "#C7DDB0", fg: "#5E7F42", label: "ONAY" }
+              : s.onayDurumu === "reddedildi"
+              ? { bg: "#FBECEE", brd: "#E8B5BB", fg: MSB.red, label: "RED" }
+              : { bg: "#FCF3E3", brd: MSB.warnBrd, fg: MSB.orange, label: "BEKLEMEDE" };
+            return (
+              <div key={s.id} className="border border-[#E0E0E0] rounded overflow-hidden">
+                {/* Başlık satırı */}
+                <div className="flex items-center gap-3 px-4 py-2 bg-[#F5F5F5] border-b border-[#DDD]">
+                  <div className="flex-1 flex items-center gap-2 flex-wrap">
+                    <span className="text-[14px] font-bold text-[#333]">{s.sinav}</span>
+                    <span className="text-[11.5px] text-[#666] tabular-nums">({s.sinavYili})</span>
+                    {(s.kategori || s.altKategori || s.alan || s.dil) && (
+                      <span className="text-[11.5px] text-[#666]">
+                        · {[s.kategori, s.altKategori, s.alan, s.dil].filter(Boolean).join(" / ")}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-[#888] truncate max-w-[200px]">{s.belgeAdi}</span>
+                  <span className="inline-block px-2 py-0.5 text-[10.5px] font-bold rounded"
+                    style={{ background: onayStyle.bg, color: onayStyle.fg, border: `1px solid ${onayStyle.brd}` }}>
+                    {onayStyle.label}
+                  </span>
+                  <button onClick={() => actions.sinavSil(p.adayId, s.id)} className="text-[#A82232] p-1 hover:bg-[#FBECEE] rounded">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* OCR detay tablosu — YKS için 4, MSÜ için 4, diğerleri için 1 satır */}
+                <table className="w-full text-[12.5px]">
+                  <thead>
+                    <tr className="bg-white text-[#666] border-b border-[#EEE]">
+                      <th className="px-4 py-1.5 text-left text-[10.5px] uppercase font-bold">OCR Alan / Sıralama Türü</th>
+                      <th className="px-4 py-1.5 text-right text-[10.5px] uppercase font-bold w-24">Ham Puan</th>
+                      <th className="px-4 py-1.5 text-right text-[10.5px] uppercase font-bold w-32">Sıralama</th>
+                      <th className="px-4 py-1.5 text-center text-[10.5px] uppercase font-bold w-24">Seviye</th>
+                      <th className="px-4 py-1.5 text-right text-[10.5px] uppercase font-bold w-28">Yüzdelik %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(s.ocrDetay && s.ocrDetay.length > 0 ? s.ocrDetay : [{ etiket: "Genel Puan", puan: s.puan, siralama: s.siralama, seviye: s.seviye, yuzdelikDilim: s.yuzdelikDilim }]).map((d, i) => (
+                      <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"}>
+                        <td className="px-4 py-1.5 text-[#333] font-medium">{d.etiket}</td>
+                        <td className="px-4 py-1.5 tabular-nums text-right font-semibold text-[#A82232]">{d.puan?.toFixed(2) ?? "—"}</td>
+                        <td className="px-4 py-1.5 tabular-nums text-right">{d.siralama != null ? d.siralama.toLocaleString("tr") : "—"}</td>
+                        <td className="px-4 py-1.5 text-center">
+                          {d.seviye ? <span className="inline-block px-2 py-0.5 bg-[#DBEAF5] text-[#1F5372] text-[10.5px] font-black rounded">{d.seviye}</span> : "—"}
+                        </td>
+                        <td className="px-4 py-1.5 tabular-nums text-right">{d.yuzdelikDilim != null ? "%" + d.yuzdelikDilim.toFixed(2) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Sonuç Kodu alt bant */}
+                <div className="px-4 py-1.5 border-t border-[#EEE] bg-[#FAFAFA] text-[11px] text-[#666] flex items-center justify-between">
+                  <span>Sonuç Kodu: <strong className="font-mono text-[#333]">{s.sonucKodu}</strong></span>
+                  <span className="text-[10px] italic">Bu değerler PDF'ten OCR ile okunmuştur ve <strong>değiştirilemez</strong>.</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

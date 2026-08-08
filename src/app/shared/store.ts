@@ -266,7 +266,9 @@ export type EgitimKaydi = {
   universite?: string;
   fakulte?: string;
   bolum?: string;
+  bolumKodu?: string;        // referansgorsel1: "Bölüm Kodu: 0000"
   ogretimTipi?: OgretimTipi;
+  sinif?: string;             // Öğrenci ise sınıf bilgisi (Örn: "4. SINIF")
   // Ortaöğretim
   egitimYeri?: EgitimYeri;
   il?: string;
@@ -284,6 +286,9 @@ export type EgitimKaydi = {
   egitimDili?: string;
 };
 
+// OCR detay satırı — sınav türüne göre birden fazla puan/sıralama olabilir
+export type SinavDetayKalem = { etiket: string; puan?: number; siralama?: number; seviye?: string; yuzdelikDilim?: number };
+
 export type SinavKaydi = {
   id: string;
   sinav: SinavTuru;
@@ -298,9 +303,10 @@ export type SinavKaydi = {
   yuzdelikDilim?: number;
   siralama?: number;
   seviye?: string;
+  ocrDetay?: SinavDetayKalem[];   // YKS'de 4 satır (TYT/SAY/SÖZ/EA), MSÜ'de 4 satır vb.
   onayDurumu: "beklemede" | "onaylandi" | "reddedildi";
   onayNotu?: string;
-  arsivlendi?: boolean;   // sene geçtiği için otomatik arşive alındı
+  arsivlendi?: boolean;
 };
 
 export type AdresBilgi = {
@@ -649,7 +655,7 @@ const seedProfiller: BasvuruProfili[] = [
       {
         id: "EGT-001", durum: "Öğrenci", seviye: "denk_uni", seviyeAdi: "Denk Ülke Üniversite",
         universite: "Gazi Üniversitesi", fakulte: "Mühendislik Fakültesi",
-        bolum: "Bilgisayar Mühendisliği", ogretimTipi: "Örgün Öğretim",
+        bolum: "Bilgisayar Mühendisliği", ogretimTipi: "Örgün Öğretim", sinif: "4. SINIF",
         baslangicTarihi: "2021-09-15", notSistemi: "4 üzerinden", mezuniyetNotu: "3.42",
       },
       {
