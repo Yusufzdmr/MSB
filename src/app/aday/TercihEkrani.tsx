@@ -3,7 +3,7 @@
 
 import { useState, useMemo, Fragment } from "react";
 import {
-  AlertCircle, Info, Check, X, Trash2, ChevronDown, ChevronRight, Minus,
+  AlertCircle, Info, Check, X, Trash2, ChevronDown, ChevronRight,
   ArrowUp, ArrowDown, FileText, Users,
 } from "lucide-react";
 import { MSB } from "../shared/theme";
@@ -97,15 +97,22 @@ export default function TercihEkrani({ adayId }: { adayId: string }) {
     <>
       {/* DİKKAT kutusu */}
       <div className="bg-white border border-[#DDDDDD] rounded p-4 mb-4">
-        <div className="flex items-start gap-3 mb-3">
-          <AlertCircle className="w-5 h-5 text-[#A82232] flex-shrink-0 mt-0.5" strokeWidth={2.5} />
-          <div>
-            <h3 className="text-[14px] font-extrabold text-[#A82232] mb-1.5 uppercase tracking-wide">DİKKAT</h3>
-            <ol className="text-[12.5px] text-[#555] space-y-0.5 list-decimal ml-5">
-              <li>Tercih yapmadan önce mutlaka başvuru kılavuzunu dikkatlice okuyunuz.</li>
-              <li>Yerleştirmelerde tercih sıranız dikkate alınacağından tercih sıranızı kontrol ediniz.</li>
-            </ol>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-[#A82232] flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+            <div>
+              <h3 className="text-[14px] font-extrabold text-[#A82232] mb-1.5 uppercase tracking-wide">DİKKAT</h3>
+              <ol className="text-[12.5px] text-[#555] space-y-0.5 list-decimal ml-5">
+                <li>Tercih yapmadan önce mutlaka başvuru kılavuzunu dikkatlice okuyunuz.</li>
+                <li>Yerleştirmelerde tercih sıranız dikkate alınacağından tercih sıranızı kontrol ediniz.</li>
+              </ol>
+            </div>
           </div>
+          {/* Kılavuz İncele (Özlük) — referans2'de sol üstte "Özlük" tuşu */}
+          <button className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[12px] font-bold text-white bg-[#4A6FA5] hover:bg-[#365688] rounded-[3px] flex-shrink-0"
+            onClick={() => alert("İlanın resmi PDF kılavuzu tam ekran açılacak (admin tarafından yüklenmiş dosya).")}>
+            <FileText className="w-3.5 h-3.5" /> Kılavuz İncele
+          </button>
         </div>
         <button className="inline-flex items-center gap-2 h-[30px] px-3 text-[12px] font-bold text-white rounded-[3px]"
           style={{ background: "#7BA05B" }}

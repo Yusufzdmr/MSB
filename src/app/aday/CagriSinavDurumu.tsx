@@ -2,7 +2,7 @@
 // tebligat metinlerini ve sonuç belgesini gösterir.
 
 import { useState } from "react";
-import { FileText, Download, Check, X, AlertCircle, Info, MessageSquare } from "lucide-react";
+import { FileText, Download, Check, X, AlertCircle, Info, MessageSquare, Clock } from "lucide-react";
 import { MSB } from "../shared/theme";
 import { useStore, type Basvuru, type Ilan } from "../shared/store";
 import { dosyaIndir } from "../shared/ui";
@@ -10,14 +10,16 @@ import { dosyaIndir } from "../shared/ui";
 const btnLgt = "inline-flex items-center gap-2 h-[32px] px-3.5 text-[13px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCCCCC] rounded-[3px]";
 const btnDrk = "inline-flex items-center gap-2 h-[32px] px-3.5 text-[13px] font-semibold text-white bg-[#4A4A4A] hover:bg-[#333] rounded-[3px]";
 
-function statuBilgi(b: Basvuru) {
+function statuBilgi(b: Basvuru, yedekSira?: number) {
   switch (b.durum) {
-    case "hazirlaniyor": return { label: "Hazırlanıyor", bg: "#F5F5F5", fg: "#555", brd: "#DDD", Ic: FileText };
-    case "gonderildi":   return { label: "İnceleniyor / Değerlendirmede", bg: MSB.warnBg, fg: MSB.orange, brd: MSB.warnBrd, Ic: Info };
-    case "onaylandi":    return { label: "Belge Onayı Alındı", bg: "#EEF6E8", fg: "#5E7F42", brd: "#C7DDB0", Ic: Check };
-    case "yerlestirildi":return { label: "Asil Yerleşti", bg: "#EEF6E8", fg: "#5E7F42", brd: "#C7DDB0", Ic: Check };
-    case "yerlestirilmedi": return { label: "Yerleştirilmedi", bg: "#FBECEE", fg: "#A82232", brd: "#E8B5BB", Ic: X };
-    case "reddedildi":   return { label: "Reddedildi / Puan Yetersiz", bg: "#FBECEE", fg: "#A82232", brd: "#E8B5BB", Ic: AlertCircle };
+    case "hazirlaniyor":         return { label: "Hazırlanıyor", bg: "#F5F5F5", fg: "#555", brd: "#DDD", Ic: FileText };
+    case "gonderildi":           return { label: "İnceleniyor / Değerlendirmede", bg: MSB.warnBg, fg: MSB.orange, brd: MSB.warnBrd, Ic: Info };
+    case "belge_onay_bekliyor":  return { label: "Belge Onayı Bekliyor", bg: MSB.warnBg, fg: MSB.orange, brd: MSB.warnBrd, Ic: FileText };
+    case "onaylandi":            return { label: "Belge Onayı Alındı", bg: "#EEF6E8", fg: "#5E7F42", brd: "#C7DDB0", Ic: Check };
+    case "yerlestirildi":        return { label: "Asil Yerleşti", bg: "#EEF6E8", fg: "#5E7F42", brd: "#C7DDB0", Ic: Check };
+    case "yedek":                return { label: `Yedek Sırada Bekliyor${yedekSira ? ` (${yedekSira}. Yedek)` : ""}`, bg: MSB.warnBg, fg: MSB.orange, brd: MSB.warnBrd, Ic: Clock };
+    case "yerlestirilmedi":      return { label: "Yerleştirilmedi", bg: "#FBECEE", fg: "#A82232", brd: "#E8B5BB", Ic: X };
+    case "reddedildi":           return { label: "Reddedildi / Puan Yetersiz", bg: "#FBECEE", fg: "#A82232", brd: "#E8B5BB", Ic: AlertCircle };
   }
 }
 
@@ -54,7 +56,9 @@ export default function CagriSinavDurumu({ adayId }: { adayId: string }) {
         <div className="divide-y divide-[#EEE]">
           {basvurular.map(b => {
             const il = ilanlar.find(i => i.id === b.ilanId);
-            const sb = statuBilgi(b);
+            const y = yerlestirmeler.find(x => x.ilanId === b.ilanId);
+            const r = y?.sonuclar.find(x => x.adayId === adayId);
+            const sb = statuBilgi(b, r?.yedekSirasi ?? b.yedekSirasi);
             const aktif = seciliId === b.id;
             return (
               <button key={b.id} onClick={() => setSeciliId(b.id)}
@@ -85,7 +89,7 @@ export default function CagriSinavDurumu({ adayId }: { adayId: string }) {
 
             <div className="p-5 space-y-4">
               {/* Statü kutusu */}
-              {(() => { const sb = statuBilgi(secili); const Ic = sb!.Ic; return (
+              {(() => { const sb = statuBilgi(secili, sonuc?.yedekSirasi ?? secili.yedekSirasi); const Ic = sb!.Ic; return (
                 <div className="p-4 rounded border-l-4 flex items-start gap-3"
                   style={{ background: sb!.bg, borderColor: sb!.brd, borderLeftColor: sb!.fg, color: sb!.fg }}>
                   <Ic className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -93,14 +97,43 @@ export default function CagriSinavDurumu({ adayId }: { adayId: string }) {
                     <div className="text-[14px] font-bold uppercase mb-1">{sb!.label}</div>
                     <div className="text-[12.5px] opacity-90">
                       {secili.durum === "gonderildi" && "Başvurunuz komisyon tarafından değerlendirilmektedir."}
+                      {secili.durum === "belge_onay_bekliyor" && "Belgeleriniz komisyon tarafından inceleniyor. Sonuç Mesajlarım'a düşecektir."}
                       {secili.durum === "onaylandi"  && "Belge onay süreciniz tamamlanmıştır. Yerleştirme aşamasını bekleyiniz."}
                       {secili.durum === "yerlestirildi" && "Tebrikler! İlan kadrosuna asil olarak yerleştirildiniz."}
+                      {secili.durum === "yedek" && "Yedek listesindesiniz. Asil listeye yükseldiğinizde bildirim alacaksınız."}
                       {secili.durum === "yerlestirilmedi" && "Kadro dahilinde değerlendirilememişsinizdir."}
                       {secili.durum === "reddedildi" && (secili.redGerekce ?? "Başvurunuz reddedilmiştir.")}
                     </div>
                   </div>
                 </div>
               ); })()}
+
+              {/* Admin resmi gerekçesi / açıklaması — rich text HTML render */}
+              {secili.adminGerekce && secili.gonderildi && (
+                <div className="border border-[#E0E0E0] rounded">
+                  <div className="px-4 py-2 border-b bg-[#F5F5F5] text-[12.5px] font-bold text-[#555] flex items-center gap-2">
+                    <MessageSquare className="w-3.5 h-3.5" /> Resmî Gerekçe / Açıklama (Sistem Yöneticisi)
+                  </div>
+                  <div className="p-4 text-[13px] text-[#333] leading-relaxed prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: secili.adminGerekce }} />
+                  {secili.tebligatBelgesi && (
+                    <div className="px-4 py-3 border-t bg-[#FAFAFA] flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#A82232]" />
+                      <span className="text-[12.5px] font-semibold text-[#333] flex-1">{secili.tebligatBelgesi}</span>
+                      <button className={btnDrk} onClick={() => {
+                        const icerik = `TEBLİGAT BELGESİ\n\nİlan: ${ilan?.baslik}\n\n${(secili.adminGerekce ?? "").replace(/<[^>]*>/g, "")}\n\nAd: ${secili.tebligatBelgesi}\nGönderim: ${secili.gonderilmeTarihi ? new Date(secili.gonderilmeTarihi).toLocaleString("tr-TR") : "-"}\n`;
+                        const blob = new Blob([icerik], { type: "text/plain;charset=utf-8" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a"); a.href = url; a.download = secili.tebligatBelgesi!.replace(/\.pdf$/i, ".txt");
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}>
+                        <Download className="w-3.5 h-3.5" /> Tebligat PDF İndir
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Yerleştirme sonucu */}
               {sonuc && (
