@@ -781,6 +781,34 @@ function autoKesinKayitSureAsimi(s: State): State {
   return { ...s, basvurular: guncelBasvurular, mesajlar: [...yeniMesajlar, ...s.mesajlar], yerlestirmeler: guncelYerlestirmeler };
 }
 
+// Ödeme süre aşımı — 48/72 saat geçen "bekleniyor" ödemeleri otomatik iptal et
+// + yedek zincirini tetikle (ödeme yapmayan asil düşer, sıradaki yedek çağrılır)
+function autoOdemeSureAsimi(s: State): State {
+  const simdi = Date.now();
+  let degisti = false;
+  const guncelBasvurular = [...s.basvurular];
+  const yeniMesajlar: Mesaj[] = [];
+  guncelBasvurular.forEach((b, idx) => {
+    if (b.odemeDurumu !== "bekleniyor" && b.odemeDurumu !== "inceleniyor") return;
+    const ilan = s.ilanlar.find(i => i.id === b.ilanId);
+    if (!ilan?.odemeKurali || ilan.odemeKurali === "yok" || !ilan.odemeVadeSaat) return;
+    // Ödeme başlangıç: yerleştirme yayın tarihi veya tercih bitiş tarihi
+    const yerl = s.yerlestirmeler.find(y => y.ilanId === b.ilanId && y.yayinlandi);
+    const baslangic = yerl ? new Date(yerl.tarih).getTime() : new Date(ilan.bitis + "T23:59:59").getTime();
+    const bitis = baslangic + ilan.odemeVadeSaat * 3600 * 1000;
+    if (simdi <= bitis) return;
+    // Süre doldu — iptal
+    degisti = true;
+    guncelBasvurular[idx] = { ...b, odemeDurumu: "iptal", durum: "yerlestirilmedi" };
+    yeniMesajlar.push({
+      id: genId("M"), konu: "Ödeme Süresi Aşımı — Tercih İptal Edildi",
+      icerik: `<strong>${ilan.baslik}</strong> için ödeme sürenizi ${ilan.odemeVadeSaat} saat içinde tamamlamadığınız için tercihiniz sistem tarafından <strong>otomatik olarak iptal edilmiştir</strong>. Puanınız ne olursa olsun simülasyona dahil edilmezsiniz. Boşalan kontenjan sıradaki yedeğe devredilecektir.`,
+      gonderen: "admin", alici: b.adayId, tarih: now(), okundu: false, tur: "hata", onemli: true, ilanId: b.ilanId,
+    });
+  });
+  return degisti ? { ...s, basvurular: guncelBasvurular, mesajlar: [...yeniMesajlar, ...s.mesajlar] } : s;
+}
+
 // Sene geçince önceki yıla ait sınavları otomatik "arşivlendi" işaretle
 function autoSinavArsivle(s: State): State {
   const yy = new Date().getFullYear();
@@ -795,12 +823,13 @@ function autoSinavArsivle(s: State): State {
   return degisti ? { ...s, profiller: yeniProfiller } : s;
 }
 
-// Periyodik: bitiş tarihi geçen ilanlar + kesin kayıt süresi geçen asiller + sınav arşiv (60sn'de bir)
+// Periyodik: bitiş tarihi geçen ilanlar + kesin kayıt süresi + sınav arşiv + ödeme süre aşımı (60sn'de bir)
 if (typeof window !== "undefined") {
   setInterval(() => {
     let yeni = autoExpireIlanlar(state);
     yeni = autoKesinKayitSureAsimi(yeni);
     yeni = autoSinavArsivle(yeni);
+    yeni = autoOdemeSureAsimi(yeni);
     if (yeni !== state) {
       state = yeni;
       notify();

@@ -1428,159 +1428,128 @@ function Screen3({ onDuyuru }: { onDuyuru?: (id: string) => void }) {
     return mc && mq;
   });
 
+  // Ekran görüntüsü stiline uygun tarih küpü — TEMİN kırmızı, DUYURU koyu gri
+  const teminMiFn = (t: string) => /TEMİN|ALIM|BAŞVURU/i.test(t);
+  const parseAy = (d: string) => {
+    const [gun, ayNo] = d.split(" ");
+    const ayIsim = ({ Oca: "OCAK", Şub: "ŞUBAT", Mar: "MART", Nis: "NİSAN", May: "MAYIS", Haz: "HAZİRAN", Tem: "TEMMUZ", Ağu: "AĞUSTOS", Eyl: "EYLÜL", Eki: "EKİM", Kas: "KASIM", Ara: "ARALIK" } as Record<string, string>)[ayNo] || ayNo?.toUpperCase();
+    return { gun, ay: ayIsim };
+  };
+  const gunAdi = (dateStr: string): string => {
+    const [gun, ayNo, yil] = dateStr.split(" ");
+    const ayNoMap = { Oca: 0, Şub: 1, Mar: 2, Nis: 3, May: 4, Haz: 5, Tem: 6, Ağu: 7, Eyl: 8, Eki: 9, Kas: 10, Ara: 11 } as Record<string, number>;
+    if (!ayNoMap[ayNo]) return "";
+    const d = new Date(parseInt(yil), ayNoMap[ayNo], parseInt(gun));
+    return ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"][d.getDay()];
+  };
+
   return (
-    <div className="min-h-screen bg-[#F1F5F9]">
-      {/* Page header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-10 py-7">
-          <h1 className="text-[26px] font-extrabold text-slate-900 tracking-tight mb-1">Duyurular</h1>
-          <p className="text-[14px] text-slate-400">Temin süreçlerine ait güncel duyurular ve bilgilendirmeler</p>
-        </div>
-      </div>
-
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-10 py-8">
-        {/* Important banner */}
-        {banner && (
-          <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 mb-6 flex items-start gap-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-4.5 h-4.5 text-amber-600" strokeWidth={2} />
+    <div className="min-h-screen bg-[#F5F5F5]">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* SORGULAMA KRİTERLERİ PANELİ — duyurular.jpeg */}
+        <section className="bg-white border border-[#DDD] rounded-md shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[#EEE] bg-[#FAFAFA]">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-[#666]" strokeWidth={2} />
+              <h2 className="text-[15px] font-bold text-[#333]">Sorgulama Kriterleri</h2>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[10.5px] font-extrabold text-amber-500 uppercase tracking-widest mb-1">Önemli Duyuru</div>
-              <p className="text-[14px] font-semibold text-amber-900 mb-0.5">
-                2026/2 Sözleşmeli Er Yerleştirme Sonuçları Açıklandı
-              </p>
-              <p className="text-[13px] text-amber-700/80">
-                TC kimlik numaranızla sisteme giriş yaparak sonucunuzu görüntüleyebilirsiniz.
-              </p>
-            </div>
-            <button onClick={() => setBanner(false)} className="p-1.5 rounded-lg hover:bg-amber-100 transition-colors flex-shrink-0 mt-0.5">
-              <X className="w-3.5 h-3.5 text-amber-500" />
-            </button>
+            <button className="text-[18px] text-[#888] hover:text-[#333]">−</button>
           </div>
-        )}
-
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* LEFT FILTER PANEL */}
-          <aside className="lg:w-60 flex-shrink-0">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 lg:sticky lg:top-[108px]">
-              {/* Search */}
-              <div className="relative mb-5">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                <input
-                  type="text" placeholder="Duyuru ara..."
-                  value={query} onChange={e => setQuery(e.target.value)}
-                  className="w-full pl-8.5 pr-3 py-2 text-[13px] bg-[#F8FAFC] border border-slate-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#0B2545]/15 focus:border-[#0B2545]/30"
-                  style={{ paddingLeft: "2rem" }}
-                />
-              </div>
-
-              {/* Category */}
-              <div className="mb-5">
-                <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2.5">Kategori</div>
-                <div className="space-y-0.5">
-                  {cats.map(c => (
-                    <button key={c} onClick={() => setCat(c)}
-                      className={`w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all ${cat === c
-                        ? "bg-[#0B2545] text-white shadow-sm"
-                        : "text-slate-600 hover:bg-slate-50"}`}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Date range */}
-              <div>
-                <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2.5">Tarih Aralığı</div>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-[10.5px] text-slate-400 mb-1 block">Başlangıç</label>
-                    <input type="date" defaultValue="2026-06-01"
-                      className="w-full px-3 py-2 text-[12px] bg-[#F8FAFC] border border-slate-200 rounded-lg text-slate-600 focus:outline-none focus:ring-1 focus:ring-[#0B2545]/20" />
-                  </div>
-                  <div>
-                    <label className="text-[10.5px] text-slate-400 mb-1 block">Bitiş</label>
-                    <input type="date" defaultValue="2026-07-31"
-                      className="w-full px-3 py-2 text-[12px] bg-[#F8FAFC] border border-slate-200 rounded-lg text-slate-600 focus:outline-none focus:ring-1 focus:ring-[#0B2545]/20" />
-                  </div>
-                </div>
-              </div>
+          <div className="p-5 space-y-3">
+            <div className="flex items-center gap-4">
+              <label className="w-[140px] text-right text-[13.5px] text-[#555] flex-shrink-0">Anahtar Kelime</label>
+              <input type="text" value={query} onChange={e => setQuery(e.target.value)}
+                className="flex-1 h-[36px] px-3.5 text-[13px] bg-white border border-[#DDD] rounded focus:outline-none focus:border-[#A82232] focus:ring-1 focus:ring-[#A82232]/20" />
             </div>
-          </aside>
-
-          {/* RIGHT — TIMELINE LIST */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[13px] text-slate-500">
-                <span className="font-bold text-slate-700">{filtered.length}</span> duyuru
-              </p>
+            <div className="flex items-center gap-4">
+              <label className="w-[140px] text-right text-[13.5px] text-[#555] flex-shrink-0">Duyuru Türü</label>
+              <select value={cat} onChange={e => setCat(e.target.value)}
+                className="flex-1 h-[36px] px-3 text-[13px] bg-white border border-[#DDD] rounded focus:outline-none focus:border-[#A82232]">
+                {cats.map(c => <option key={c}>{c}</option>)}
+              </select>
             </div>
+            <div className="flex items-center gap-2 pt-1">
+              <div className="w-[140px] flex-shrink-0" />
+              <button onClick={() => { /* Sorgu zaten reactive */ }}
+                className="inline-flex items-center gap-2 h-[36px] px-4 text-[13px] font-bold text-white bg-[#333] hover:bg-[#222] rounded">
+                <Search className="w-3.5 h-3.5" /> Sorgula
+              </button>
+              <button onClick={() => { setQuery(""); setCat("Tümü"); }}
+                className="inline-flex items-center gap-2 h-[36px] px-4 text-[13px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#DDD] rounded">
+                <RotateCcw className="w-3.5 h-3.5" /> Temizle
+              </button>
+            </div>
+          </div>
+        </section>
 
-            {filtered.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 py-16 text-center">
-                <Bell className="w-8 h-8 text-slate-200 mx-auto mb-3" strokeWidth={1.5} />
-                <h3 className="text-[15px] font-semibold text-slate-600 mb-1">Duyuru bulunamadı</h3>
-                <p className="text-[13px] text-slate-400">Arama kriterlerinize uygun duyuru mevcut değil.</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-                {filtered.map((item, idx) => (
-                  <div key={item.id}
-                    className={`group p-5 sm:p-6 hover:bg-[#F8FAFC] transition-colors cursor-pointer ${idx < filtered.length - 1 ? "border-b border-slate-100" : ""}`}
-                    onClick={() => {
-                      const t = item.title.toLowerCase();
-                      if (onDuyuru && (t.includes("yerleştirme") || t.includes("sonuç") || t.includes("çağrı durumu"))) {
-                        onDuyuru("D-001");
-                      } else {
-                        setSelected(item);
-                      }
-                    }}
-                  >
-                    <div className="flex gap-4 sm:gap-5">
-                      {/* Date + timeline */}
-                      <div className="flex flex-col items-center flex-shrink-0">
-                        <div className="px-3 py-2 bg-[#F1F5F9] rounded-xl text-center min-w-[60px] border border-slate-200/60">
-                          <div className="text-[14px] font-extrabold text-[#0B2545] leading-none">
-                            {item.date.split(" ")[0]}
-                          </div>
-                          <div className="text-[10px] text-slate-400 leading-none mt-0.5 font-medium">
-                            {item.date.split(" ")[1]} {item.date.split(" ")[2]}
-                          </div>
+        {/* TÜM DUYURU VE TEMİNLER LİSTESİ */}
+        <section className="bg-white border border-[#DDD] rounded-md shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
+          <div className="px-5 py-3 border-b border-[#EEE] bg-[#FAFAFA]">
+            <h2 className="text-[15px] font-bold text-[#333]">Tüm Duyuru ve Teminler <span className="text-[12px] text-[#888] font-normal">({filtered.length})</span></h2>
+          </div>
+          {filtered.length === 0 ? (
+            <div className="py-16 text-center">
+              <Bell className="w-8 h-8 text-[#CCC] mx-auto mb-3" strokeWidth={1.5} />
+              <h3 className="text-[14px] font-semibold text-[#666]">Duyuru bulunamadı</h3>
+              <p className="text-[12.5px] text-[#888] mt-1">Arama kriterlerinize uygun kayıt yok.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-[#EEE]">
+              {filtered.map(item => {
+                const isTemin = teminMiFn(item.title);
+                const { gun, ay } = parseAy(item.date);
+                const gunLabel = gunAdi(item.date);
+                const isSonucAcik = /yerleştirme|sonuç|çağrı durumu/i.test(item.title);
+                return (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => {
+                        if (onDuyuru && isSonucAcik) onDuyuru("D-001");
+                        else setSelected(item);
+                      }}
+                      className="w-full flex items-start gap-4 px-5 py-4 hover:bg-[#FAFAFA] transition-colors text-left group">
+                      {/* Tarih küpü — TEMİN kırmızı, DUYURU koyu gri */}
+                      <div className="flex flex-col items-center justify-center min-w-[68px] py-1.5 rounded border overflow-hidden flex-shrink-0"
+                        style={{ background: "#fff", borderColor: isTemin ? "#E8B5BB" : "#DDD" }}>
+                        <div className="w-full text-center text-[9.5px] font-bold uppercase tracking-widest text-white py-0.5"
+                          style={{ background: isTemin ? MSB.red : "#333" }}>
+                          {ay}
                         </div>
-                        {idx < filtered.length - 1 && (
-                          <div className="w-px flex-1 bg-slate-100 mt-2 min-h-[20px]" />
-                        )}
+                        <div className="text-[22px] font-black text-[#333] tabular-nums leading-none py-1">{gun}</div>
+                        <div className="text-[9.5px] font-semibold text-[#888]">{gunLabel}</div>
                       </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <CatPill cat={item.cat} />
-                          {item.important && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-600 border border-red-200">
-                              <AlertCircle className="w-2.5 h-2.5" />
-                              Önemli
+                      {/* İçerik */}
+                      <div className="flex-1 min-w-0 pt-1">
+                        <h3 className="text-[14.5px] font-bold text-[#333] leading-snug mb-1.5 group-hover:text-[#A82232] transition-colors uppercase">
+                          {isTemin && <span className="text-[#A82232]">[TEMİN] </span>}
+                          {item.title.replace(/^\[TEMİN\]\s*/i, "")}
+                        </h3>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[12.5px] text-[#A82232]">
+                            <Clock className="w-3.5 h-3.5" /> {item.date}
+                          </span>
+                          {isSonucAcik && (
+                            <span className="inline-block px-2 py-0.5 text-[10.5px] font-bold rounded text-white" style={{ background: "#5E7F42" }}>
+                              Sonuçlar Açıklandı
+                            </span>
+                          )}
+                          {item.important && !isSonucAcik && (
+                            <span className="inline-block px-2 py-0.5 text-[10.5px] font-bold rounded bg-[#FBECEE] text-[#A82232] border border-[#E8B5BB]">
+                              ÖNEMLİ
                             </span>
                           )}
                         </div>
-                        <h3 className="text-[14px] sm:text-[15px] font-bold text-slate-900 leading-snug mb-1.5 group-hover:text-[#0B2545] transition-colors">
-                          {item.title}
-                        </h3>
-                        <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-2 mb-3">
-                          {item.summary}
-                        </p>
-                        <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#0B2545] group-hover:text-[#C9A24B] transition-colors">
-                          Devamını Oku <ChevronRight className="w-3.5 h-3.5" />
-                        </span>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+
+                      <ChevronRight className="w-4 h-4 text-[#CCC] flex-shrink-0 group-hover:text-[#A82232] transition-colors mt-2" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
 
       {/* Detail panel / modal */}
