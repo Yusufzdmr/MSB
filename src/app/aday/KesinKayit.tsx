@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { MSB } from "../shared/theme";
 import { useStore, actions } from "../shared/store";
+import { dosyaIndir } from "../shared/ui";
 
 const btnDrk = "inline-flex items-center gap-2 h-[34px] px-3.5 text-[13px] font-semibold text-white bg-[#4A4A4A] hover:bg-[#333] rounded-[3px]";
 const btnLgt = "inline-flex items-center gap-2 h-[34px] px-3.5 text-[13px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCCCCC] rounded-[3px]";
@@ -119,7 +120,13 @@ export default function KesinKayit({ adayId }: { adayId: string }) {
                 <p className="text-[13px] text-[#555] mb-4 max-w-md mx-auto">
                   Tebrikler! Kesin Kayıt Kabul Belgeniz sistemde hazırdır. Barkodlu + QR kodlu resmi PDF olarak indirebilirsiniz.
                 </p>
-                <button className={btnDrk + " mx-auto"} onClick={() => alert(`${aktif.kayitBelgesiPdf} indiriliyor (mock, barkodlu + QR).`)}>
+                <button className={btnDrk + " mx-auto"} onClick={() => {
+                  const kod = `KKB-${aktif.adayId.slice(0, 5)}-${aktif.ilanId.slice(-6)}`;
+                  dosyaIndir(
+                    `T.C. MİLLÎ SAVUNMA BAKANLIĞI\nKESİN KAYIT KABUL BELGESİ\n\nİlan: ${ilan.baslik}\nTCKN: ${aktif.adayId.slice(0, 3)}******${aktif.adayId.slice(-2)}\nKayıt Kodu: ${kod}\nOnay Tarihi: ${aktif.kesinKayitOnayTarihi ? new Date(aktif.kesinKayitOnayTarihi).toLocaleDateString("tr-TR") : "-"}\n\nBu belge resmi barkodlu / karekodlu Kesin Kayıt Kabul Belgesidir.\nKurumun fiziki yerleşkesine gidip veya uzaktan eğitim/görev başlangıcına adım atabilirsiniz.\n`,
+                    `${aktif.kayitBelgesiPdf ?? "KKB.txt"}`
+                  );
+                }}>
                   <Download className="w-3.5 h-3.5" /> Kesin Kayıt Kabul Belgesi (PDF) İndir
                 </button>
               </div>

@@ -96,7 +96,18 @@ export default function DuyuruDetay({ duyuruId, onBack }: { duyuruId: string; on
                     <div className="text-[11px] text-[#888]">{ek.boyutKB} KB · PDF/Excel</div>
                   </div>
                   <button className="inline-flex items-center gap-2 h-[32px] px-3 text-[12px] font-bold text-white bg-[#A82232] hover:bg-[#8B1A25] rounded-[3px]"
-                    onClick={() => alert(`Dosya indiriliyor: ${ek.ad} (mock).`)}>
+                    onClick={() => {
+                      const icerik = `${duyuru.baslik}\n\n[Ek Belge: ${ek.ad}]\n\nBu belge demo amaçlıdır. Gerçek yayın döneminde MSB Personel Temin Dairesi Başkanlığı tarafından paylaşılan resmi PDF/Excel dosyaları buradan indirilir.\n\nİndirme Tarihi: ${new Date().toLocaleString("tr-TR")}\n`;
+                      const blob = new Blob([icerik], { type: "text/plain;charset=utf-8" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = ek.ad.replace(/\.(pdf|xlsx?|docx?)$/i, ".txt");
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}>
                     <Download className="w-3.5 h-3.5" /> İndirmek için tıklayınız
                   </button>
                 </li>
@@ -264,7 +275,46 @@ export default function DuyuruDetay({ duyuruId, onBack }: { duyuruId: string; on
               </table>
 
               <div className="flex items-center gap-3 flex-wrap">
-                <button className={btnDrk} onClick={() => alert(`Sonuç belgesi PDF olarak indiriliyor (mock). QR Kodlu.`)}>
+                <button className={btnDrk} onClick={() => {
+                  const s = sonucGosterilen as DuyuruSonucKayit;
+                  const kod = s.sonucKodu ?? "SR-" + s.tc.slice(0, 6);
+                  const icerik =
+`T.C. MİLLÎ SAVUNMA BAKANLIĞI
+PERSONEL TEMİN DAİRESİ BAŞKANLIĞI
+
+═══════════════════════════════════════════
+SONUÇ BELGESİ
+═══════════════════════════════════════════
+
+Sınav / Temin Adı : ${duyuru.baslik}
+T.C. Kimlik No     : ${s.tc.slice(0, 3)}******${s.tc.slice(-2)}
+Adı Soyadı         : ${s.ad} ${s.soyad}
+Yerleşilen Program : ${s.program ?? "-"}
+Statü              : ${s.statu.toUpperCase()}
+Sıra               : ${s.sira ?? "-"}
+Etkin Puan         : ${s.puan?.toFixed(2) ?? "-"}
+Sonuç Kodu         : ${kod}
+Sonuç Tarihi       : ${new Date(s.sonucTarihi).toLocaleDateString("tr-TR")}
+${s.gerekce ? "\nGerekçe: " + s.gerekce : ""}
+
+Doğrulama: bu belgenin doğruluğu ${window.location.origin} adresinden
+sonuç sorgulama panelinden TCKN + Kontrol Kodu ile teyit edilebilir.
+
+Kontrol Kodu: ${kod}
+Barkod     : [DEMO — Gerçek çıktıda karekod bulunur]
+
+Bu sonuç TEBLİGAT YERİNE GEÇMEKTEDİR.
+Asil adayların kayıt/katılış işlemlerini belirtilen tarihte
+ilgili okul/birlik komutanlığına yapması zorunludur.
+═══════════════════════════════════════════`;
+                  const blob = new Blob([icerik], { type: "text/plain;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `sonuc-${kod}.txt`;
+                  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}>
                   <Download className="w-3.5 h-3.5" /> Sonuç Belgesi İndir (PDF – QR Kodlu)
                 </button>
                 <div className="text-[11.5px] text-[#888] flex-1 min-w-[200px]">

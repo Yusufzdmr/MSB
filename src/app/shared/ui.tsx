@@ -202,3 +202,16 @@ export function maskTC(tc: string): string {
   if (!tc || tc.length < 11) return tc;
   return `${tc.slice(0, 3)}•••••${tc.slice(-3)}`;
 }
+
+// Metin içeriğini dosya olarak indirir (mock PDF/Excel için)
+export function dosyaIndir(icerik: string, dosyaAdi: string, mime = "text/plain;charset=utf-8"): void {
+  const blob = new Blob([icerik], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = dosyaAdi;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

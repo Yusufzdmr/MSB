@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { MSB } from "../shared/theme";
 import { useStore, actions, type Mesaj, type MesajTur } from "../shared/store";
+import { dosyaIndir } from "../shared/ui";
 
 const btnLgt = "inline-flex items-center gap-1.5 h-[30px] px-2.5 text-[12px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCCCCC] rounded-[3px]";
 const btnDrk = "inline-flex items-center gap-2 h-[32px] px-3.5 text-[13px] font-semibold text-white bg-[#4A4A4A] hover:bg-[#333] rounded-[3px]";
@@ -142,7 +143,10 @@ export default function Mesajlarim({ adayId }: { adayId: string }) {
                 </div>
 
                 <div className="px-5 py-3 border-t bg-[#FAFAFA] flex items-center gap-2 flex-wrap">
-                  <button className={btnDrk} onClick={() => alert("Tebligat/sonuç belgesi PDF olarak indiriliyor (mock, QR kodlu).")}>
+                  <button className={btnDrk} onClick={() => dosyaIndir(
+                    `T.C. MİLLÎ SAVUNMA BAKANLIĞI\nTEBLİGAT / BİLGİLENDİRME\n\nKonu: ${secili.konu}\nTarih: ${new Date(secili.tarih).toLocaleString("tr-TR")}\nGönderen: ${secili.gonderen === "admin" ? "Sistem Yöneticisi" : secili.gonderen}\n\n${secili.icerik.replace(/<[^>]*>/g, "")}\n`,
+                    `tebligat-${secili.id}.txt`
+                  )}>
                     <Download className="w-3.5 h-3.5" /> Tebligat Belgesini İndir (PDF)
                   </button>
                   <button className={btnLgt + " ml-auto"} onClick={() => setSecili(null)}>Kapat</button>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FileText, Download, Check, X, AlertCircle, Info, MessageSquare } from "lucide-react";
 import { MSB } from "../shared/theme";
 import { useStore, type Basvuru, type Ilan } from "../shared/store";
+import { dosyaIndir } from "../shared/ui";
 
 const btnLgt = "inline-flex items-center gap-2 h-[32px] px-3.5 text-[13px] font-semibold text-[#333] bg-white hover:bg-[#F5F5F5] border border-[#CCCCCC] rounded-[3px]";
 const btnDrk = "inline-flex items-center gap-2 h-[32px] px-3.5 text-[13px] font-semibold text-white bg-[#4A4A4A] hover:bg-[#333] rounded-[3px]";
@@ -112,7 +113,13 @@ export default function CagriSinavDurumu({ adayId }: { adayId: string }) {
                     <div><div className="text-[#888] text-[10.5px] uppercase font-bold">Tarih</div><div className="text-[12.5px]">{new Date(yerl!.tarih).toLocaleDateString("tr-TR")}</div></div>
                   </div>
                   <div className="px-4 py-3 border-t bg-[#FAFAFA] flex items-center gap-2">
-                    <button className={btnDrk} style={{ background: MSB.red, borderColor: MSB.redDark }} onClick={() => alert("Sonuç belgesi PDF olarak indiriliyor (mock).")}>
+                    <button className={btnDrk} style={{ background: MSB.red, borderColor: MSB.redDark }} onClick={() => {
+                      const kod = `SR-${sonuc!.tercihSirasi}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+                      dosyaIndir(
+                        `T.C. MİLLÎ SAVUNMA BAKANLIĞI\nPERSONEL TEMİN — SONUÇ BELGESİ\n\nİlan: ${ilan?.baslik}\nStatü: ${sonuc!.durum.toUpperCase()}\nTercih Sırası: ${sonuc!.tercihSirasi}\nEtkin Puan: ${sonuc!.puan.toFixed(2)}\nSonuç Kodu: ${kod}\nTarih: ${new Date(yerl!.tarih).toLocaleDateString("tr-TR")}\n\nBu belge tebligat yerine geçmektedir.`,
+                        `sonuc-${kod}.txt`
+                      );
+                    }}>
                       <Download className="w-3.5 h-3.5" /> Sonuç Belgesi İndir (PDF – QR Kodlu)
                     </button>
                     <div className="text-[11px] text-[#888] ml-auto">Bu sonuç tebligat yerine geçmektedir.</div>

@@ -536,6 +536,33 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
       lastDay: "05.09.2026",
       status: "AÇIK",
     },
+    {
+      cat: "ÖĞRENCİ TEMİNİ",
+      title: "MİLLİ SAVUNMA ÜNİVERSİTESİ 2026 YILI HARP OKULLARI VE ASTSUBAY MYO ASKERİ ÖĞRENCİ TEMİNİ",
+      date: "20.07.2026",
+      summary: "Kara, Deniz, Hava Harp Okulları ve Astsubay Meslek Yüksek Okullarına 2026 yılı askeri öğrenci temini için başvurular alınmaktadır.",
+      quota: 675,
+      lastDay: "31.08.2026",
+      status: "AÇIK",
+    },
+    {
+      cat: "ÖĞRENCİ TEMİNİ",
+      title: "2026 YILI JANDARMA VE SAHİL GÜVENLİK AKADEMİSİ ÖĞRENCİ TEMİNİ",
+      date: "15.07.2026",
+      summary: "JSGA lisans ve önlisans programları için askeri öğrenci temin duyurusu yayımlanmıştır.",
+      quota: 320,
+      lastDay: "25.08.2026",
+      status: "AÇIK",
+    },
+    {
+      cat: "YEDEK PERSONEL",
+      title: "2026 YILI YEDEK SUBAY VE YEDEK ASTSUBAY TEMİN FAALİYETİ",
+      date: "10.07.2026",
+      summary: "Askerlik hizmetini yedek subay/astsubay statüsünde yapmak isteyen adaylar için başvurular alınmaktadır.",
+      quota: 850,
+      lastDay: "10.09.2026",
+      status: "AÇIK",
+    },
   ];
 
   const duyurularStatic = [
@@ -558,9 +585,17 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
   const AY_TR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
   const GUN_TR = ["Paz","Pts","Sal","Çar","Per","Cum","Cts"];
 
+  // Başlığa göre otomatik kategori — HARP/MYO/ÖĞRENCİ geçen ilanlar Öğrenci Temini
+  const kategoriBul = (title: string): "PERSONEL TEMİNİ" | "ÖĞRENCİ TEMİNİ" | "YEDEK PERSONEL" => {
+    const t = title.toUpperCase();
+    if (/HARP OKUL|ASTSUBAY MYO|MSÜ|MİLLİ SAVUNMA ÜNİVERSİTES|ASKERİ ÖĞRENCİ|MESLEK YÜKSEK OKUL/.test(t)) return "ÖĞRENCİ TEMİNİ";
+    if (/YEDEK SUBAY|YEDEK ASTSUBAY/.test(t)) return "YEDEK PERSONEL";
+    return "PERSONEL TEMİNİ";
+  };
+
   const featured = (live?.teminler && live.teminler.length >= 3)
-    ? live.teminler.slice(0, 3).map((t, i): typeof featuredStatic[number] => ({
-        cat: i === 1 ? "ÖĞRENCİ TEMİNİ" : "PERSONEL TEMİNİ",
+    ? live.teminler.slice(0, 6).map((t): typeof featuredStatic[number] => ({
+        cat: kategoriBul(t.title),
         title: t.title,
         date: t.date || "—",
         summary: "Detaylı bilgi için ilgili duyuruyu inceleyiniz. Başvurular Personel Temin Daire Başkanlığı web sistemi üzerinden alınmaktadır.",
@@ -777,7 +812,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
               : featured.filter(f =>
                   (filter === "Personel Temini" && f.cat === "PERSONEL TEMİNİ") ||
                   (filter === "Öğrenci Temini"  && f.cat === "ÖĞRENCİ TEMİNİ") ||
-                  (filter === "Yedek Personel"  && /YEDEK/i.test(f.title))
+                  (filter === "Yedek Personel"  && (f.cat === "YEDEK PERSONEL" || /YEDEK/i.test(f.title)))
                 );
             if (filtered.length === 0) return (
               <div className="bg-white border border-dashed border-[#DDD] p-10 text-center">
@@ -1055,7 +1090,16 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
                 </p>
               </div>
               <div className="flex items-center gap-2 mt-5 pt-4 border-t border-[#EEE]">
-                <button onClick={() => { toast("Duyuru PDF olarak indirildi", { kind: "success", sub: "duyuru_" + Date.now() + ".pdf" }); }}
+                <button onClick={() => {
+                  if (!openDuyuru) return;
+                  const icerik = `T.C. MİLLÎ SAVUNMA BAKANLIĞI\nDUYURU\n\n${openDuyuru.title}\n\nTarih: ${openDuyuru.date ?? "-"}\nKategori: ${openDuyuru.cat ?? "Genel"}\n\nBu belge demo amaçlıdır. Gerçek yayında PDF/e-Devlet dosyası burada olur.\n`;
+                  const blob = new Blob([icerik], { type: "text/plain;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url;
+                  a.download = "duyuru_" + Date.now() + ".txt";
+                  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
                   className="inline-flex items-center gap-2 px-4 py-2 text-[12.5px] font-bold text-white bg-[#A82232] hover:bg-[#8B1A25] rounded-[3px]">
                   <Download className="w-3.5 h-3.5" /> PDF İndir
                 </button>
@@ -1077,7 +1121,7 @@ function Screen1({ onDetail, onNav, onDuyuru }: { onDetail: () => void; onNav: (
 // SCREEN 2 — DETAIL
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Screen2({ onBack }: { onBack: () => void }) {
+function Screen2({ onBack, onNav }: { onBack: () => void; onNav?: (s: Screen) => void }) {
   const [tab, setTab] = useState(0);
   const TABS = ["Genel Bilgi", "Aranan Nitelikler", "Başvuru Süreci", "SSS"];
 
@@ -1146,7 +1190,9 @@ function Screen2({ onBack }: { onBack: () => void }) {
                 <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" strokeWidth={1.75} />01 Haz – 15 Eyl 2026</span>
               </div>
             </div>
-            <button className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-3.5 bg-[#C9A24B] text-[#0B2545] font-extrabold rounded-xl hover:bg-[#dbb456] transition-all text-[15px] shadow-[0_2px_16px_rgba(201,162,75,0.45)] whitespace-nowrap">
+            <button
+              onClick={() => onNav ? onNav("login") : onBack()}
+              className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-3.5 bg-[#C9A24B] text-[#0B2545] font-extrabold rounded-xl hover:bg-[#dbb456] transition-all text-[15px] shadow-[0_2px_16px_rgba(201,162,75,0.45)] whitespace-nowrap">
               Başvuruya Başla <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -3076,7 +3122,7 @@ export default function App() {
       )}
 
       {screen === "listings"      && <Screen1 onDetail={() => setScreen("detail")} onNav={setScreen} onDuyuru={(id) => { setAktifDuyuruId(id); setScreen("duyuru-detay"); }} />}
-      {screen === "detail"        && <Screen2 onBack={() => setScreen("listings")} />}
+      {screen === "detail"        && <Screen2 onBack={() => setScreen("listings")} onNav={setScreen} />}
       {screen === "announcements" && <Screen3 onDuyuru={(id) => { setAktifDuyuruId(id); setScreen("duyuru-detay"); }} />}
       {screen === "duyuru-detay"  && <DuyuruDetay duyuruId={aktifDuyuruId} onBack={() => setScreen("announcements")} />}
       {screen === "login"    && <LoginScreen    onHome={() => setScreen("listings")} onRegister={() => setScreen("register")} onForgot={() => setScreen("forgot")} onDashboard={() => setScreen("dashboard")} onEdevlet={() => setScreen("edevlet")} onAdmin={() => setScreen("admin")} />}
